@@ -1,0 +1,59 @@
+{
+  "traces": [],
+  "train": [],
+  "demos": [
+    {
+      "premise": "On the night shift at a 24-hour laundromat, an insomniac folds strangers' clothes and finds a wedding dress that fits her exactly.",
+      "genre": "literary",
+      "style": "intimate",
+      "story_text": "The dryers hummed their hollow tune, a low vibration through the floor. She pulled a pink sock from the basket, matched it to its twin, and folded the damp cotton into a neat rectangle. The fluorescent lights buzzed above, bleaching the world flat. She hadn't slept in forty hours.\n\nA bundle of white satin caught her eye. She tugged it free. A wedding dress. The fabric was cool and heavy, sliding through her fingers like water. She held it up. The bodice was fitted, the skirt a soft cascade of layers. It looked small.\n\n\"What are you doing?\" a voice said. A woman stood by the door, a duffel bag at her feet.\n\n\"Just folding,\" she said.\n\nThe woman snorted. \"That's mine.\"\n\nShe laid the dress across the folding table. Its lace trim was delicate, almost worn. She ran her thumb along the hem. \"It's beautiful.\"\n\nThe woman didn't move. \"Try it on.\"\n\n\"No.\"\n\n\"Go on. No one's here.\"\n\nShe looked at the dress. Then at the woman. Then back at the dress. The zipper slid up her spine like a whisper. It fit. Perfectly. The waist cinched, the hem kissed the floor. She stood still, barely breathing.\n\nThe woman smiled, tired. \"Keep it.\"\n\nShe shook her head. \"I can't.\"\n\n\"Neither can I.\" The woman picked up her duffel and walked out into the rain.\n\nShe stood alone in the white light, the dress holding her like a promise she never made. The dryers kept spinning. She didn't move."
+    },
+    {
+      "premise": "A night-train conductor punches tickets for passengers boarding at stations that no longer exist.",
+      "genre": "magical realism",
+      "style": "haunting",
+      "story_text": "The ticket stub was damp in his fingers, the ink bleeding into the pulp. He held it up to the dim light of the swaying carriage. The station name was a smear, a ghost of letters. He knew it anyway. Marston Halt. Closed since the war.\n\nThe old woman watched him from her seat. Her coat smelled of mothballs and wet wool. “You going to punch it, or read it to me?”\n\nHe slid the ticket into his clipper. The metal teeth bit down with a clean, final snap. A tiny hole appeared, like a missing star. He handed it back. “You’re on the 11:45 to Brighton.”\n\nShe tucked the stub into her glove. “I know where I’m going.”\n\nThe train groaned, picking up speed through the black countryside. Outside the window, a platform flickered past. A single lantern. A sign, rusted and listing. No passengers waiting. The conductor felt a cold knot in his chest. He’d seen that platform before. In a photograph. In a dream.\n\nHe moved down the aisle. A man in a heavy coat slept, his head against the glass. Another woman, younger, clutched a suitcase tied with string. Her ticket read *Dunwich Heath*. The line was pulled up in 1963.\n\nShe looked up, her eyes tired. “Is it far?”\n\nHe shook his head. He didn’t tell her the truth. He just punched the hole. The train rushed on through the dark, through the stations that were only shadows now, carrying its passengers home to places that had already vanished from the map."
+    },
+    {
+      "premise": "A subway busker plays a cello missing one string and swears the gap is where the best notes live.",
+      "genre": "literary",
+      "style": "musical",
+      "story_text": "The bow touched the remaining strings, and the sound that came out was a raw, hollow thing, like wind through a broken house. The cello’s missing G-string gaped, a dark slot of silence. A woman in a damp coat dropped a quarter into the open case. He didn’t look up.\n\n“Why don’t you fix it?” she asked, her voice thin and hurried.\n\nHe stopped playing, the bow hovering. “Fix what?”\n\n“The string,” she said, pointing. “It’s broken.”\n\nHe touched the empty space above the fingerboard. “That’s where the best notes live. The ones you can’t hear. They fill the gaps between everything else.” The woman blinked, then walked away, her heels clicking against the tile. The quarter sat alone in the case, a silver eye staring up at the fluorescent lights.\n\nHe played again, a slow, scraping melody. The train rumbled beneath his feet, a low bass that shook the bones in his chest. He felt the missing string more than he ever felt the others—a phantom limb of sound, a pressure of silence where a note should be. A man with a guitar case stopped, listening. He didn’t drop money. He just stood there, head tilted, as if trying to hear the nothing between the notes.\n\nThe train doors opened, coughing out a crowd. The man with the guitar case stepped onto the train. The doors closed. The cello hummed its broken song into the empty tunnel, and the silence of the missing string sang louder than any note."
+    },
+    {
+      "premise": "A girl who collects lightning in mason jars must decide whether to free the storm that took her brother.",
+      "genre": "fantasy",
+      "style": "vivid",
+      "story_text": "The glass was warm against her palm, the jar humming with a trapped, restless light. Each flicker threw her shadow jagged across the kitchen wall, and she could smell the ozone, sharp and clean, like the air after a bad fight. She’d caught this one just before dawn, when the sky split open over the ridge.\n\n“You’re gonna burn the house down,” Leo said from the doorway. He was twelve, two years younger than her, and he always said the worst thing first.\n\n“It’s not that hot.” She pressed her other hand to the glass. The lightning inside pulsed, a slow, patient heartbeat. It remembered the storm it came from. It remembered the day the creek rose, the way the water had grabbed her brother’s ankles and pulled.\n\nLeo stepped closer. “Let it go.”\n\n“No.” Her voice was a wire, tight and thin. “This one’s the one that hit the oak. The one that lit up the whole valley right after he—” She stopped. The jar trembled. A single blue arc licked the lid.\n\nLeo’s hand found her shoulder. “He’s gone. That’s just weather.”\n\nShe looked at the jar. At the wild, caged thing that had witnessed everything. She could keep it forever, a secret lantern. Or she could twist the lid, let the storm finish what it started. The choice sat in her chest, heavy as the glass in her hands."
+    }
+  ],
+  "signature": {
+    "instructions": "Write a vivid ~250-word short story section in the given genre and\nstyle. Use concrete sensory detail and real interiority. Avoid cliché\nand AI crutch transitions (however/moreover/furthermore). Vary sentence\nlength. Output only the story prose.",
+    "fields": [
+      {
+        "prefix": "Premise:",
+        "description": "Story premise / seed idea"
+      },
+      {
+        "prefix": "Genre:",
+        "description": "Target genre"
+      },
+      {
+        "prefix": "Style:",
+        "description": "Prose style"
+      },
+      {
+        "prefix": "Story Text:",
+        "description": "The generated story prose, ~250 words, no preamble"
+      }
+    ]
+  },
+  "lm": null,
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.13",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}
