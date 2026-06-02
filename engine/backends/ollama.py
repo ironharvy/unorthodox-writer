@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_OLLAMA_URL = "http://192.168.1.20:11434"
 DEFAULT_MODEL = "qwen3.6:27b"
 DEFAULT_NUM_CTX = 8192
+DEFAULT_NUM_PREDICT = 2048  # max tokens to generate (-1 = unlimited, Ollama default)
 
 
 def _env_flag(name: str, default: bool) -> bool:
@@ -82,6 +83,8 @@ class OllamaBackend:
         self.timeout = timeout
         env_ctx = os.environ.get("OLLAMA_NUM_CTX")
         self.num_ctx = num_ctx if num_ctx is not None else (int(env_ctx) if env_ctx else DEFAULT_NUM_CTX)
+        env_pred = os.environ.get("OLLAMA_NUM_PREDICT")
+        self.num_predict = num_predict if num_predict is not None else (int(env_pred) if env_pred else DEFAULT_NUM_PREDICT)
         self.temperature = temperature
         self.top_p = top_p
         self.think = think if think is not None else _env_flag("OLLAMA_THINK", False)
@@ -132,6 +135,8 @@ class OllamaBackend:
                 "num_ctx": self.num_ctx,
             },
         }
+        if self.num_predict is not None:
+            payload["options"]["num_predict"] = self.num_predict
         if json_mode:
             # Constrain the model to emit a single valid JSON object. This makes
             # the novel pipeline's bible/critique parsing far more reliable.
