@@ -15,24 +15,26 @@ v2 fixes the two root causes:
      model's output, we generate the demonstration stories with DeepSeek
      (cloud, strong) via :class:`engine.backends.cloud.CloudBackend`, score them
      with :class:`engine.metrics.StoryMetrics`, and keep only the best
-     (overall ≥ 8.0). Those become DSPy ``Example`` rows carrying a *gold*
-     ``story_text``, so MIPROv2 can show the local model genuinely good prose as
-     labeled few-shot demos — not its own recycled artifacts.
+     (overall ≥ 7.5). Those become DSPy ``Example`` rows carrying a *gold*
+     ``story_text``, so the optimizer can show the local model genuinely good
+     prose as labeled few-shot demos — not its own recycled artifacts.
 
-  2. **Optimize the instructions, not just the demos.** We use ``MIPROv2``
-     (Bayesian search over proposed instruction candidates + demo sets) rather
-     than ``BootstrapFewShot`` (which only selects demos). Instruction
-     proposals are written by DeepSeek (the ``prompt_model``); the story task
-     itself runs on the local optimization LM (qwen3.6:27b, the ``task_model``).
-     MIPROv2 only adopts a candidate if it scores better on a held-out
-     validation set, so the search cannot regress below the baseline there.
+  2. **Few-shot selection, not instruction search.** An earlier cut of v2 used
+     ``MIPROv2`` to also optimize the *instruction*, but the Dreamer's telemetry
+     analysis (idea 20260602-2002-001) showed that search actively degraded
+     quality (composite Δ -0.011 across 3 seeds). We now use a simple
+     :class:`FewShotOptimizer`: it ranks the gold demos by composite score,
+     attaches the best 4 as labeled few-shot examples, and freezes the
+     instruction. Deterministic — no Bayesian search, no ``optuna``.
 
 Composite metric
 ----------------
-The optimization objective is reference-free and weights artifact-cleanliness
-heavily, because AI crutches are exactly what we want to drive out::
+The optimization objective is reference-free and balances overall quality,
+artifact-cleanliness, and paragraph-level coherence::
 
-    composite = 0.6 * (overall / 10) + 0.4 * (1 - ai_artifact_score / 10)
+    composite = 0.6 * (overall / 10)
+              + 0.3 * (1 - ai_artifact_score / 10)
+              + 0.1 * (coherence / 10)
 
 It is a *fast heuristic signal* for prompt search, not a literary judgment —
 see the ``--editorial`` flag and the note saved in the run report.
@@ -40,32 +42,27 @@ see the ``--editorial`` flag and the note saved in the run report.
 Model strategy
 --------------
   * Demo generation : DeepSeek (paid quality) — the gold training stories.
-  * Optimization LM : qwen3.6:27b (best local quality) — generates stories
-                      during the search and at final inference; this is the LM
-                      whose prompt we are optimizing.
-  * Instruction LM  : DeepSeek (MIPROv2 ``prompt_model``) — writing strong
-                      meta-instructions benefits most from a strong model. Falls
-                      back to the optimization LM if DeepSeek is unavailable.
+  * Optimization LM : qwen3.6:27b (best local quality) — generates stories with
+                      the selected few-shot demos at evaluation/inference time.
 
 If DeepSeek is unavailable *or unreachable*, demo generation falls back to the
-local model with a higher quality bar (≥ 8.5) and the local model also proposes
-instructions.
+local model with a higher quality bar (≥ 8.5).
 
 Robustness / reproducibility
 ----------------------------
   * Config is read at *runtime* (after ``.env`` loading) into a :class:`Config`
     dataclass, so ``.env`` values actually take effect.
-  * The optimization runs over multiple seeds (``OPTIMIZER_SEEDS``); the report
-    carries the per-seed deltas and the mean ± std, so "improved" is only
-    claimed when the mean delta is positive *and* the spread does not cross zero.
+  * Few-shot selection is deterministic, so the run is reproducible: the report
+    carries the exact baseline → optimized delta and a verdict that only claims
+    improvement when the composite delta is positive.
 
 Outputs (written to ``test_output/``)
 -------------------------------------
-  * ``optimized_v2.json``        — the best-seed optimized DSPy program.
-  * ``optimized_v2_report.json`` — full run report: baseline + per-seed
-                                    optimized scores, per-premise breakdowns,
-                                    trial history, selected instruction, demo
-                                    provenance, model ids, timestamp, runtime.
+  * ``optimized_v2.json``        — the optimized DSPy program (best 4 demos).
+  * ``optimized_v2_report.json`` — full run report: baseline + optimized scores,
+                                    per-premise breakdowns, the baseline→optimized
+                                    delta + verdict, demo provenance + which demos
+                                    were selected, model id, timestamp, runtime.
   * ``optimized_v2_editorial.md`` — only with ``--editorial``: baseline vs
                                     optimized prose, side by side, for a human
                                     editorial review slice.
@@ -75,9 +72,7 @@ Usage::
     PYTHONPATH=. python engine/optimizer.py [--editorial]
 
 Tunable via env: ``OLLAMA_URL``, ``OPTIMIZER_TASK_MODEL`` (default qwen3.6:27b),
-``OPTIMIZER_TRIALS`` (default 7), ``OPTIMIZER_CANDIDATES`` (default 7),
-``OPTIMIZER_DEMO_THRESHOLD`` (default 8.0), ``OPTIMIZER_SEEDS`` (default 3;
-either a count like ``3`` or an explicit list like ``9,17,23``).
+``OPTIMIZER_DEMO_THRESHOLD`` (default 7.5).
 """
 
 from __future__ import annotations
@@ -85,8 +80,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import math
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass, field
@@ -103,9 +98,18 @@ from engine.backends.ollama import OllamaBackend
 # ── Static defaults (overridable via env at runtime; see Config) ─────────────
 DEFAULT_URL = "http://192.168.1.20:11434"
 DEFAULT_TASK_MODEL = "qwen3.6:27b"
+# Demo quality bar. Lowered 8.0 → 7.5 (Dreamer idea 20260602-2002-002): the
+# 8.0 cutoff discarded 6-7 DeepSeek demos scoring 7.4-7.9 — still well above the
+# task model's own baseline — which starved the few-shot pool and made the
+# prompt brittle across seeds. 7.5 retains those diverse, above-baseline demos.
+DEFAULT_DEMO_THRESHOLD = 7.5
 DEMO_THRESHOLD_FALLBACK = 8.5  # stricter bar when demos come from the local model
-N_GOLD_DEMOS = 8
+N_GOLD_DEMOS = 8        # size of the scored gold-demo pool to keep
+N_FEWSHOT_DEMOS = 4     # how many of the pool become labeled few-shot examples
 GEN_MAX_TOKENS = 512
+# Below this parameter count a task model is too instruction-sensitive for
+# reliable prompt optimization (Dreamer idea 20260602-2002-005).
+MIN_OPTIMIZATION_PARAM_B = 10.0
 
 _METRICS = StoryMetrics()
 
@@ -130,13 +134,11 @@ class Config:
 
     url: str
     task_model: str
-    num_trials: int
-    num_candidates: int
     demo_threshold: float
     demo_threshold_fallback: float
     n_gold_demos: int
+    n_fewshot_demos: int
     gen_max_tokens: int
-    seeds: list[int]
     editorial: bool
     out_dir: Path
     optimized_path: Path
@@ -149,13 +151,12 @@ class Config:
         return cls(
             url=os.environ.get("OLLAMA_URL", DEFAULT_URL),
             task_model=os.environ.get("OPTIMIZER_TASK_MODEL", DEFAULT_TASK_MODEL),
-            num_trials=int(os.environ.get("OPTIMIZER_TRIALS", "7")),
-            num_candidates=int(os.environ.get("OPTIMIZER_CANDIDATES", "7")),
-            demo_threshold=float(os.environ.get("OPTIMIZER_DEMO_THRESHOLD", "8.0")),
+            demo_threshold=float(os.environ.get("OPTIMIZER_DEMO_THRESHOLD",
+                                                 str(DEFAULT_DEMO_THRESHOLD))),
             demo_threshold_fallback=DEMO_THRESHOLD_FALLBACK,
             n_gold_demos=N_GOLD_DEMOS,
+            n_fewshot_demos=N_FEWSHOT_DEMOS,
             gen_max_tokens=GEN_MAX_TOKENS,
-            seeds=_parse_seeds(os.environ.get("OPTIMIZER_SEEDS", "3")),
             editorial=editorial,
             out_dir=out_dir,
             optimized_path=out_dir / "optimized_v2.json",
@@ -164,21 +165,38 @@ class Config:
         )
 
 
-def _parse_seeds(raw: str) -> list[int]:
-    """Parse ``OPTIMIZER_SEEDS``: a count (``"3"``) or explicit list (``"9,17,23"``).
+# Parameter-size token in a model tag, e.g. the "27b" in "qwen3.6:27b" or the
+# "4b" in "nemotron-3-nano:4b". Only the tag *after* the colon is inspected so
+# the "3" in "qwen3" is never mistaken for a parameter count.
+_PARAM_SIZE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*b\b", re.IGNORECASE)
 
-    A bare count ``N`` expands to a deterministic, well-spread seed sequence so
-    repeated runs are reproducible while still exploring distinct MIPROv2 search
-    trajectories.
+
+def _model_param_billions(model: str) -> float | None:
+    """Best-effort parameter count (in billions) parsed from a model tag.
+
+    ``qwen3.6:27b`` → 27.0, ``nemotron-3-nano:4b`` → 4.0, ``qwen3:latest`` →
+    None (no size encoded in the tag).
     """
-    raw = (raw or "").strip()
-    if not raw:
-        return [9, 23, 37]
-    if "," in raw:
-        seeds = [int(tok) for tok in raw.split(",") if tok.strip()]
-        return seeds or [9]
-    n = max(1, int(raw))
-    return [9 + 14 * i for i in range(n)]
+    tag = model.split(":", 1)[1] if ":" in model else model
+    m = _PARAM_SIZE_RE.search(tag)
+    return float(m.group(1)) if m else None
+
+
+def _warn_if_small_task_model(cfg: "Config") -> None:
+    """Warn when the optimization task model is too small to be reliable.
+
+    Dreamer idea 20260602-2002-005: the qwen3:latest (8B) verify run regressed
+    while the qwen3.6:27b run did not — small models are too sensitive to
+    instruction changes for the optimizer to trust their deltas.
+    """
+    size = _model_param_billions(cfg.task_model)
+    if size is not None and size < MIN_OPTIMIZATION_PARAM_B:
+        print(
+            f"  ⚠ Warning: models under {MIN_OPTIMIZATION_PARAM_B:g}B parameters "
+            f"(task_model '{cfg.task_model}' is ~{size:g}B) may be too sensitive "
+            "to instruction changes for reliable optimization. Consider using "
+            "qwen3.6:27b or larger for optimization runs.\n"
+        )
 
 
 # ── Training / validation / test premises ───────────────────
@@ -202,8 +220,9 @@ TRAIN_PREMISES = [
     ("An ice-road trucker hauls a sealed cargo she is forbidden to open, and the knocking inside keeps time with her heart.", "thriller", "cinematic"),
 ]
 
-# Held back for MIPROv2's internal validation search (no gold needed — the
-# metric is reference-free). Distinct from train and test.
+# A held-out validation slice (no gold needed — the metric is reference-free),
+# distinct from train and test. Retained for ad-hoc validation; the
+# FewShotOptimizer's demo selection is deterministic and needs no val search.
 VAL_PREMISES = [
     ("A clockmaker repairs a pocket watch that runs backward and finds himself aging in reverse with it.", "fantasy", "atmospheric"),
     ("A hospice nurse teaches a dying sailor to tie the knots he can no longer see.", "literary", "tender"),
@@ -249,6 +268,8 @@ DEMO_SYSTEM = (
     "woven, navigate the complexities, in the realm of, little did.\n"
     "- Avoid the passive voice, avoid em-dash overuse, and never repeat a "
     "distinctive phrase.\n"
+    "- Do not exceed the word limit. If you approach it, finish the current "
+    "sentence cleanly. Never truncate mid-sentence or mid-paragraph.\n"
     "- Open in the middle of a moment. Output ONLY the story prose — no title, "
     "no preamble, no notes."
 )
@@ -267,17 +288,24 @@ def _demo_user_prompt(premise: str, genre: str, style: str) -> str:
 def composite_metric(example, pred, trace=None) -> float:
     """Reference-free objective in [0, 1].
 
-    Composite of overall quality and an inverted artifact penalty, so the
-    optimizer is rewarded for both good prose *and* the absence of AI crutches::
+    Composite of overall quality, an inverted artifact penalty, and paragraph-
+    level semantic coherence, so the optimizer is rewarded for good prose, the
+    absence of AI crutches, AND non-recycled paragraph phrasing::
 
-        0.6 * (overall / 10) + 0.4 * (1 - ai_artifact_score / 10)
+        0.6 * (overall / 10) + 0.3 * (1 - ai_artifact_score / 10) + 0.1 * (coherence / 10)
+
+    Dreamer idea 20260602-2002-004: the artifact weight dropped 0.4 → 0.3
+    because crutch-word counting rewards surface patterns rather than better
+    stories; the freed 0.1 now rewards the new coherence metric, which catches
+    paragraph-level recycling the crutch-word detector cannot see.
     """
     text = getattr(pred, "story_text", "") or ""
     if len(text.split()) < 40:
         return 0.0
     m = _METRICS.compute(text)
     artifact_penalty = 1.0 - (m["ai_artifact_score"] / 10.0)
-    return 0.6 * (m["overall"] / 10.0) + 0.4 * artifact_penalty
+    coherence = m["coherence_score"] / 10.0
+    return 0.6 * (m["overall"] / 10.0) + 0.3 * artifact_penalty + 0.1 * coherence
 
 
 # ── DSPy signature ──────────────────────────────────────────
@@ -286,7 +314,9 @@ def _build_signature(dspy):
         """Write a vivid ~250-word short story section in the given genre and
         style. Use concrete sensory detail and real interiority. Avoid cliché
         and AI crutch transitions (however/moreover/furthermore). Vary sentence
-        length. Output only the story prose."""
+        length. Do not exceed the word limit; if you approach it, finish the
+        current sentence cleanly — never truncate mid-sentence or mid-paragraph.
+        Output only the story prose."""
 
         premise = dspy.InputField(desc="Story premise / seed idea")
         genre = dspy.InputField(desc="Target genre")
@@ -449,136 +479,66 @@ def _per_premise(ev: dict) -> list[dict]:
             "premise": r["premise"],
             "overall": round(r["metrics"]["overall"], 2),
             "artifact": round(r["metrics"]["ai_artifact_score"], 2),
+            "coherence": round(r["metrics"]["coherence_score"], 2),
+            "truncated": bool(r["metrics"].get("truncated", False)),
             "composite": round(r["composite"], 4),
         }
         for r in ev["rows"]
     ]
 
 
-# ── Trial-history extraction (issue #4) ─────────────────────
-def _program_instruction(program) -> str | None:
-    try:
-        preds = program.predictors()
-        if preds:
-            return getattr(preds[0].signature, "instructions", None)
-    except Exception:  # noqa: BLE001
-        return None
-    return None
+def _count_truncated(ev: dict) -> int:
+    """Number of stories in an evaluation that were clipped mid-sentence."""
+    return sum(1 for r in ev["rows"] if r["metrics"].get("truncated"))
 
 
-def _extract_trial_info(optimizer, optimized) -> dict:
-    """Pull what MIPROv2 exposes about the search, defensively across versions.
+# ── Few-shot optimizer (replaces MIPROv2; Dreamer idea 20260602-2002-001) ──
+class FewShotOptimizer:
+    """Few-shot-only prompt optimizer.
 
-    Returns selected instruction text, number of trials actually run, the
-    per-trial scores it logged, and the best trial score — so the saved report
-    *proves* an optimization happened rather than just storing the demos.
+    MIPROv2's instruction search *degraded* the composite objective (Δ -0.011
+    across 3 seeds), so this optimizer drops the instruction search entirely and
+    keeps only what worked — the gold DeepSeek demos. It ranks the gold demos by
+    their composite score, attaches the best ``k`` as labeled few-shot examples,
+    and freezes the signature instruction. Deterministic given the demo set: no
+    Bayesian search, no ``optuna``.
     """
-    info: dict = {
-        "num_trials_run": None,
-        "best_trial_score": None,
-        "trial_scores": [],
-        "selected_instruction": _program_instruction(optimized),
-    }
 
-    score = getattr(optimized, "score", None)
-    if isinstance(score, (int, float)):
-        info["best_trial_score"] = float(score)
+    def __init__(self, dspy_mod, signature, *, k: int = N_FEWSHOT_DEMOS):
+        self._dspy = dspy_mod
+        self._signature = signature
+        self.k = k
+        self.selected: list = []          # the chosen few-shot Example rows
 
-    logs = getattr(optimizer, "trial_logs", None) or getattr(optimized, "trial_logs", None)
-    if isinstance(logs, dict):
-        info["num_trials_run"] = len(logs)
-        scores: list[float] = []
-        for entry in logs.values():
-            if not isinstance(entry, dict):
-                continue
-            for key in ("score", "full_eval_score", "full_minibatch_eval_score", "val_score"):
-                val = entry.get(key)
-                if isinstance(val, (int, float)):
-                    scores.append(float(val))
-                    break
-        info["trial_scores"] = [round(s, 4) for s in scores]
-        candidates = scores + ([info["best_trial_score"]] if info["best_trial_score"] is not None else [])
-        if candidates:
-            info["best_trial_score"] = round(max(candidates), 4)
-    return info
+    @staticmethod
+    def _demo_composite(example) -> float:
+        """Composite score of a demo's gold story (the ranking key)."""
+        text = getattr(example, "story_text", "") or ""
+        return composite_metric(None, type("P", (), {"story_text": text})())
+
+    def compile(self, trainset: list):
+        """Rank ``trainset`` by demo composite, attach the best ``k`` as demos.
+
+        Returns a :class:`dspy.Predict` program carrying the selected demos; it
+        uses the frozen signature instruction at inference time.
+        """
+        ranked = sorted(trainset, key=self._demo_composite, reverse=True)
+        self.selected = ranked[: self.k]
+        program = self._dspy.Predict(self._signature)
+        program.demos = list(self.selected)
+        return program
 
 
-# ── Per-seed optimization run (issue #7) ────────────────────
-def _run_seed(cfg, dspy, Signature, trainset, valset, task_lm, prompt_lm,
-              seed, before) -> dict | None:
-    """Run one MIPROv2 optimization at ``seed`` and evaluate it on the test set.
-
-    Returns the per-seed result dict, or ``None`` if this seed's optimization
-    failed (so the other seeds still contribute to the report).
-    """
-    from dspy.teleprompt import MIPROv2
-
-    print(f"  ── seed {seed} ──")
-    student = dspy.Predict(Signature)
-    try:
-        optimizer = MIPROv2(
-            metric=composite_metric,
-            prompt_model=prompt_lm,
-            task_model=task_lm,
-            auto=None,
-            num_candidates=cfg.num_candidates,
-            init_temperature=1.0,
-            max_bootstrapped_demos=2,   # a couple of metric-gated bootstrapped demos
-            max_labeled_demos=4,        # plus up to 4 GOLD DeepSeek stories
-            metric_threshold=0.70,      # only strong generations may be bootstrapped
-            num_threads=4,
-            verbose=True,
-            seed=seed,
-        )
-        optimized = optimizer.compile(
-            student,
-            trainset=trainset,
-            valset=valset,
-            num_trials=cfg.num_trials,
-            minibatch=False,                  # valset is small — full eval each trial
-            requires_permission_to_run=False, # non-interactive
-            provide_traceback=True,
-        )
-    except Exception as exc:  # noqa: BLE001
-        import traceback
-        print(f"  ✗ seed {seed} optimization failed: {exc}")
-        traceback.print_exc()
-        return None
-
-    after = _evaluate(optimized, TEST_PREMISES, f"optimized(seed={seed})")
-    trial = _extract_trial_info(optimizer, optimized)
-    print(f"  seed {seed}: overall {before['avg_overall']:.2f} → {after['avg_overall']:.2f} "
-          f"(Δ {after['avg_overall'] - before['avg_overall']:+.2f})  | "
-          f"composite {before['avg_composite']:.3f} → {after['avg_composite']:.3f} "
-          f"(Δ {after['avg_composite'] - before['avg_composite']:+.3f})  "
-          f"[{after['elapsed']:.0f}s]\n")
-    return {
-        "seed": seed,
-        "after": after,
-        "trial": trial,
-        "program": optimized,
-        "delta_overall": after["avg_overall"] - before["avg_overall"],
-        "delta_artifact": after["avg_artifact"] - before["avg_artifact"],
-        "delta_composite": after["avg_composite"] - before["avg_composite"],
-    }
-
-
-# ── Aggregate + verdict (issue #7) ──────────────────────────
-def _mean_std(values: list[float]) -> tuple[float, float]:
-    n = len(values)
-    if n == 0:
-        return (0.0, 0.0)
-    mean = sum(values) / n
-    if n == 1:
-        return (mean, 0.0)
-    var = sum((v - mean) ** 2 for v in values) / n  # population std
-    return (mean, math.sqrt(var))
-
-
+# ── Verdict ─────────────────────────────────────────────────
 def _verdict(comp_mean: float, comp_std: float, n_seeds: int) -> tuple[str, bool]:
-    """Only claim improvement if the mean delta > 0 AND the spread clears zero."""
+    """Only claim improvement if the mean delta > 0 AND the spread clears zero.
+
+    Few-shot selection is deterministic, so the normal call is a single
+    comparison (``comp_std=0``, ``n_seeds=1``) and the verdict turns purely on
+    the sign of the exact composite delta.
+    """
     reliable = comp_mean > 0 and (comp_mean - comp_std) > 0
-    spread = "single seed — no variance" if n_seeds < 2 else f"±{comp_std:.3f}"
+    spread = "deterministic — no variance" if n_seeds < 2 else f"±{comp_std:.3f}"
     if reliable:
         return (f"✓ optimized prompt reliably improved the composite objective "
                 f"(Δ {comp_mean:+.3f} {spread})", True)
@@ -591,7 +551,7 @@ def _verdict(comp_mean: float, comp_std: float, n_seeds: int) -> tuple[str, bool
 
 
 # ── Editorial slice (issue #8) ──────────────────────────────
-def _write_editorial(path: Path, before: dict, best: dict, cfg: Config,
+def _write_editorial(path: Path, before: dict, after: dict, cfg: Config,
                      demo_source: str) -> None:
     """Dump baseline vs optimized prose, side by side, for a human review pass."""
     lines = [
@@ -600,14 +560,14 @@ def _write_editorial(path: Path, before: dict, best: dict, cfg: Config,
         f"> {_EDITORIAL_NOTE}",
         "",
         f"- task_model: `{cfg.task_model}`  ·  demo source: `{demo_source}`  ·  "
-        f"best seed: `{best['seed']}`",
+        f"optimizer: `FewShotOptimizer (best {cfg.n_fewshot_demos} demos)`",
         "- Read each pair below and judge the *prose*, not the numbers. The "
         "metric guided the search; it does not certify the result.",
         "",
         "---",
         "",
     ]
-    for b, a in zip(before["rows"], best["after"]["rows"]):
+    for b, a in zip(before["rows"], after["rows"]):
         lines.append(f"## {b['premise']}")
         lines.append("")
         lines.append(f"_genre: {b['genre']} · style: {b['style']}_")
@@ -641,10 +601,11 @@ def main(argv: list[str] | None = None) -> int:
     cfg.out_dir.mkdir(parents=True, exist_ok=True)  # issue #5: ensure dir exists
 
     t_start = time.time()
-    print(f"\n=== DSPy story-prompt optimizer v2 "
+    print(f"\n=== DSPy story-prompt optimizer v2 — FewShotOptimizer "
           f"(task_model={cfg.task_model}, {cfg.url}) ===")
-    print(f"    seeds={cfg.seeds}  trials={cfg.num_trials}  "
-          f"candidates={cfg.num_candidates}  editorial={cfg.editorial}\n")
+    print(f"    demo_threshold={cfg.demo_threshold:.1f}  "
+          f"few-shot demos={cfg.n_fewshot_demos}  editorial={cfg.editorial}\n")
+    _warn_if_small_task_model(cfg)
 
     try:
         import dspy
@@ -682,22 +643,8 @@ def main(argv: list[str] | None = None) -> int:
         print("  (Is the model pulled and the server reachable?)")
         return 1
 
-    # Instruction proposer: DeepSeek when available (strong meta-prompts),
-    # otherwise reuse the local LM.
-    prompt_lm = task_lm
-    prompt_model_id = task_model_id
-    deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
-    if deepseek_key:
-        try:
-            cand = dspy.LM("deepseek/deepseek-chat", api_key=deepseek_key,
-                           temperature=0.9, max_tokens=1500)
-            _ = cand("Reply with the single word: ready")
-            prompt_lm = cand
-            prompt_model_id = "deepseek/deepseek-chat"
-            print("  ✓ using DeepSeek as the MIPROv2 instruction proposer (prompt_model)\n")
-        except Exception as exc:  # noqa: BLE001
-            print(f"  (DeepSeek prompt_model unavailable: {exc}; using {cfg.task_model})\n")
-
+    # FewShotOptimizer does not propose instructions, so no separate prompt LM
+    # is needed — DeepSeek is used only for gold demo generation (STEP 1).
     Signature = _build_signature(dspy)
 
     # 3. Baseline evaluation (deterministic — computed once) ----------------
@@ -708,100 +655,70 @@ def main(argv: list[str] | None = None) -> int:
           f"(artifact {before['avg_artifact']:.2f}, composite {before['avg_composite']:.3f})  "
           f"[{before['elapsed']:.0f}s]\n")
 
-    # 4. MIPROv2 optimization across seeds ---------------------------------
-    print(f"STEP 4 — optimize prompt INSTRUCTIONS with MIPROv2 over "
-          f"{len(cfg.seeds)} seed(s)")
+    # 4. Few-shot optimization (deterministic: rank gold demos, keep best k) -
+    k = min(cfg.n_fewshot_demos, len(gold))
+    print(f"STEP 4 — FewShotOptimizer: rank {len(gold)} gold demo(s), keep best {k}")
     trainset = [
         dspy.Example(premise=r["premise"], genre=r["genre"], style=r["style"],
                      story_text=r["text"]).with_inputs("premise", "genre", "style")
         for r in gold
     ]
-    valset = [
-        dspy.Example(premise=p, genre=g, style=s).with_inputs("premise", "genre", "style")
-        for (p, g, s) in VAL_PREMISES
-    ]
+    optimizer = FewShotOptimizer(dspy, Signature, k=k)
+    optimized = optimizer.compile(trainset)
+    selected_premises = {ex.premise for ex in optimizer.selected}
+    print(f"  selected {len(optimizer.selected)} few-shot demo(s) by composite score:")
+    for ex in optimizer.selected:
+        print(f"      comp={FewShotOptimizer._demo_composite(ex):.3f} | {ex.premise[:60]}…")
+    print()
 
-    seed_results = []
-    for seed in cfg.seeds:
-        res = _run_seed(cfg, dspy, Signature, trainset, valset, task_lm, prompt_lm,
-                        seed, before)
-        if res is not None:
-            seed_results.append(res)
-    if not seed_results:
-        print("✗ every seed's optimization failed; cannot report.")
-        return 1
-    print("  ✓ optimization complete\n")
+    # 5. Evaluate baseline vs optimized + verdict --------------------------
+    print("STEP 5 — evaluate OPTIMIZED program (best-demo few-shot) on held-out premises")
+    after = _evaluate(optimized, TEST_PREMISES, "optimized")
+    d_overall = after["avg_overall"] - before["avg_overall"]
+    d_artifact = after["avg_artifact"] - before["avg_artifact"]
+    d_comp = after["avg_composite"] - before["avg_composite"]
+    verdict, reliable = _verdict(d_comp, 0.0, 1)
+    n_trunc_base = _count_truncated(before)
+    n_trunc_opt = _count_truncated(after)
+    n_test = len(TEST_PREMISES)
 
-    # 5. Aggregate + report -------------------------------------------------
-    print("STEP 5 — evaluate OPTIMIZED programs (per-seed deltas)")
     print("═" * 68)
-    print(" PER-SEED RESULTS (held-out test set, baseline → optimized)")
+    print(" BASELINE → OPTIMIZED (held-out test set)")
     print("═" * 68)
-    print(f"  baseline : overall {before['avg_overall']:.2f}  "
-          f"artifact {before['avg_artifact']:.2f}  composite {before['avg_composite']:.3f}")
-    print("─" * 68)
-    for r in seed_results:
-        a = r["after"]
-        print(f"  seed {r['seed']:>4} : overall {a['avg_overall']:.2f} "
-              f"(Δ {r['delta_overall']:+.2f})  "
-              f"artifact {a['avg_artifact']:.2f} (Δ {r['delta_artifact']:+.2f})  "
-              f"composite {a['avg_composite']:.3f} (Δ {r['delta_composite']:+.3f})")
-    print("═" * 68)
-
-    overall_after = [r["after"]["avg_overall"] for r in seed_results]
-    artifact_after = [r["after"]["avg_artifact"] for r in seed_results]
-    comp_after = [r["after"]["avg_composite"] for r in seed_results]
-    d_overall = [r["delta_overall"] for r in seed_results]
-    d_artifact = [r["delta_artifact"] for r in seed_results]
-    d_comp = [r["delta_composite"] for r in seed_results]
-
-    om, osd = _mean_std(overall_after)
-    am, asd = _mean_std(artifact_after)
-    cm, csd = _mean_std(comp_after)
-    dom, dosd = _mean_std(d_overall)
-    dam, dasd = _mean_std(d_artifact)
-    dcm, dcsd = _mean_std(d_comp)
-
-    verdict, reliable = _verdict(dcm, dcsd, len(seed_results))
-
-    print(f"  overall  : {before['avg_overall']:.2f} → {om:.2f} ± {osd:.2f}  "
-          f"(Δ {dom:+.2f} ± {dosd:.2f})")
-    print(f"  artifact : {before['avg_artifact']:.2f} → {am:.2f} ± {asd:.2f}  "
-          f"(Δ {dam:+.2f} ± {dasd:.2f})   (lower is better)")
-    print(f"  composite: {before['avg_composite']:.3f} → {cm:.3f} ± {csd:.3f}  "
-          f"(Δ {dcm:+.3f} ± {dcsd:.3f})")
+    print(f"  overall  : {before['avg_overall']:.2f} → {after['avg_overall']:.2f}  "
+          f"(Δ {d_overall:+.2f})")
+    print(f"  artifact : {before['avg_artifact']:.2f} → {after['avg_artifact']:.2f}  "
+          f"(Δ {d_artifact:+.2f})   (lower is better)")
+    print(f"  composite: {before['avg_composite']:.3f} → {after['avg_composite']:.3f}  "
+          f"(Δ {d_comp:+.3f})")
+    print(f"  truncated: baseline {n_trunc_base}/{n_test} → optimized {n_trunc_opt}/{n_test} "
+          f"clipped mid-sentence")
     print(f"  verdict  : {verdict}")
     print("═" * 68)
     print(f"  note: {_EDITORIAL_NOTE}")
     print("═" * 68 + "\n")
 
-    # Best seed = largest composite delta (this program is the one we persist).
-    best = max(seed_results, key=lambda r: r["delta_composite"])
-
     # 6. Persist the optimized program + full report -----------------------
     try:
-        best["program"].save(str(cfg.optimized_path))
-        print(f"  saved optimized program (seed {best['seed']}) → {cfg.optimized_path}")
+        optimized.save(str(cfg.optimized_path))
+        print(f"  saved optimized program → {cfg.optimized_path}")
     except Exception as exc:  # noqa: BLE001
         print(f"  (could not save optimized program: {exc})")
 
     report = {
-        "schema": "optimized_v2_report/1",
+        "schema": "optimized_v2_report/2",
+        "optimizer": "FewShotOptimizer",
         "generated_at": _utc_now_iso(),
         "total_runtime_sec": round(time.time() - t_start, 1),
         "note": _EDITORIAL_NOTE,
         "config": {
             "task_model": cfg.task_model,
             "task_model_id": task_model_id,
-            "prompt_model_id": prompt_model_id,
             "ollama_url": cfg.url,
-            "num_trials": cfg.num_trials,
-            "num_candidates": cfg.num_candidates,
             "demo_threshold": demo_threshold,
-            "seeds": cfg.seeds,
+            "n_fewshot_demos": k,
             "n_train_premises": len(TRAIN_PREMISES),
-            "n_val_premises": len(VAL_PREMISES),
-            "n_test_premises": len(TEST_PREMISES),
+            "n_test_premises": n_test,
         },
         "demos": {
             "source": demo_source,
@@ -816,8 +733,10 @@ def main(argv: list[str] | None = None) -> int:
                     "style": r["style"],
                     "overall": round(r["metrics"]["overall"], 2),
                     "artifact": round(r["metrics"]["ai_artifact_score"], 2),
+                    "coherence": round(r["metrics"]["coherence_score"], 2),
                     "composite": round(r["composite"], 4),
                     "below_threshold": bool(r.get("below_threshold", False)),
+                    "selected": r["premise"] in selected_premises,
                 }
                 for r in gold
             ],
@@ -827,48 +746,24 @@ def main(argv: list[str] | None = None) -> int:
             "avg_artifact": round(before["avg_artifact"], 3),
             "avg_composite": round(before["avg_composite"], 4),
             "elapsed_sec": round(before["elapsed"], 1),
+            "n_truncated": n_trunc_base,
             "per_premise": _per_premise(before),
         },
-        "seeds": [
-            {
-                "seed": r["seed"],
-                "optimized": {
-                    "avg_overall": round(r["after"]["avg_overall"], 3),
-                    "avg_artifact": round(r["after"]["avg_artifact"], 3),
-                    "avg_composite": round(r["after"]["avg_composite"], 4),
-                    "elapsed_sec": round(r["after"]["elapsed"], 1),
-                    "per_premise": _per_premise(r["after"]),
-                },
-                "delta": {
-                    "overall": round(r["delta_overall"], 3),
-                    "artifact": round(r["delta_artifact"], 3),
-                    "composite": round(r["delta_composite"], 4),
-                },
-                "num_trials_run": r["trial"]["num_trials_run"],
-                "best_trial_score": r["trial"]["best_trial_score"],
-                "trial_scores": r["trial"]["trial_scores"],
-                "selected_instruction": r["trial"]["selected_instruction"],
-            }
-            for r in seed_results
-        ],
-        "aggregate": {
-            "n_seeds": len(seed_results),
-            "best_seed": best["seed"],
-            "optimized_overall_mean": round(om, 3),
-            "optimized_overall_std": round(osd, 3),
-            "optimized_artifact_mean": round(am, 3),
-            "optimized_artifact_std": round(asd, 3),
-            "optimized_composite_mean": round(cm, 4),
-            "optimized_composite_std": round(csd, 4),
-            "delta_overall_mean": round(dom, 3),
-            "delta_overall_std": round(dosd, 3),
-            "delta_artifact_mean": round(dam, 3),
-            "delta_artifact_std": round(dasd, 3),
-            "delta_composite_mean": round(dcm, 4),
-            "delta_composite_std": round(dcsd, 4),
-            "reliable_improvement": reliable,
-            "verdict": verdict,
+        "optimized": {
+            "avg_overall": round(after["avg_overall"], 3),
+            "avg_artifact": round(after["avg_artifact"], 3),
+            "avg_composite": round(after["avg_composite"], 4),
+            "elapsed_sec": round(after["elapsed"], 1),
+            "n_truncated": n_trunc_opt,
+            "per_premise": _per_premise(after),
         },
+        "delta": {
+            "overall": round(d_overall, 3),
+            "artifact": round(d_artifact, 3),
+            "composite": round(d_comp, 4),
+        },
+        "reliable_improvement": reliable,
+        "verdict": verdict,
     }
     try:
         cfg.report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False),
@@ -880,7 +775,7 @@ def main(argv: list[str] | None = None) -> int:
     # 7. Editorial slice (issue #8) ----------------------------------------
     if cfg.editorial:
         try:
-            _write_editorial(cfg.editorial_path, before, best, cfg, demo_source)
+            _write_editorial(cfg.editorial_path, before, after, cfg, demo_source)
             print(f"  saved editorial review slice → {cfg.editorial_path}")
         except OSError as exc:
             print(f"  (could not save editorial slice: {exc})")
@@ -891,7 +786,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="DSPy story-prompt optimizer v2 (MIPROv2 + gold demos)."
+        description="DSPy story-prompt optimizer v2 (FewShotOptimizer + gold demos)."
     )
     parser.add_argument(
         "--editorial", action="store_true",

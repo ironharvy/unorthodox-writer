@@ -44,6 +44,13 @@ _BE_FORMS = {"is", "are", "was", "were", "be", "been", "being", "am"}
 _DIALOGUE_QUOTE_RE = re.compile(r"[“”\"]([^“”\"]+)[“”\"]")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])[\"”\)\]]?\s+(?=[\"“\(\[A-Z0-9])")
 _WORD_RE = re.compile(r"[A-Za-z']+")
+# A clean ending: sentence-final punctuation (incl. an ellipsis), optionally
+# followed by closing quotes/brackets, at the very end of the text. Stories
+# that end without this were almost certainly clipped by a token limit
+# mid-sentence (the "[clipped]" failure the optimizer was producing).
+_SENTENCE_FINAL_RE = re.compile(r"[.!?…][\"”’'\)\]]*$")
+# Points docked from ``overall`` when a story is detected as truncated.
+TRUNCATION_PENALTY = 2.5
 _CHAPTER_HEADER_RE = re.compile(r"^#{1,3}\s+(?:chapter\b|ch\.?\s*\d)", re.IGNORECASE | re.MULTILINE)
 # Past-participle-ish: a word ending in -ed or a common irregular participle.
 _IRREGULAR_PARTICIPLES = {
@@ -120,6 +127,8 @@ class StoryMetrics:
         dialogue_ratio = self._dialogue_ratio(text)
         pacing_cv = self._chapter_balance(text, chapter_word_counts)
         repetition = self._check_repetition(text)
+        coherence = self._semantic_coherence(text)
+        truncated = self._truncation_check(text)
 
         subscores = {
             "artifact": 10.0 - artifact,                       # lower artifact -> higher score
@@ -130,6 +139,11 @@ class StoryMetrics:
             "repetition": 10.0 - repetition,                   # lower repetition -> higher score
         }
         overall = sum(subscores[k] * w for k, w in self.WEIGHTS.items())
+        # A story clipped mid-sentence is unusable regardless of its prose
+        # scores, so dock the overall directly (truncation is a hard failure,
+        # not just one weighted dimension among many).
+        if truncated:
+            overall -= TRUNCATION_PENALTY
 
         return {
             "ai_artifact_score": round(artifact, 2),           # 0 clean .. 10 riddled (lower better)
@@ -138,6 +152,8 @@ class StoryMetrics:
             "dialogue_ratio": round(dialogue_ratio, 3),        # fraction of words inside quotes
             "pacing_balance": (round(pacing_cv, 3) if pacing_cv is not None else None),  # CV (lower better)
             "repetition_score": round(repetition, 2),          # 0 none .. 10 heavy (lower better)
+            "coherence_score": round(coherence, 2),            # 0 recycled .. 10 diverse (higher better)
+            "truncated": truncated,                            # True if clipped mid-sentence
             "subscores": {k: round(v, 2) for k, v in subscores.items()},
             "overall": round(_clamp(overall), 2),              # weighted 0-10 (higher better)
             "word_count": len(_words(text)),
@@ -370,6 +386,56 @@ class StoryMetrics:
         out = [(" ".join(g), c) for g, c in grams.items() if c >= min_count]
         return sorted(out, key=lambda x: -x[1])
 
+    # ── Truncation ──────────────────────────────────────────
+
+    def _truncation_check(self, text: str) -> bool:
+        """True if the story was clipped mid-sentence (no terminal punctuation).
+
+        A token limit hit mid-thought leaves prose that ends without sentence-
+        final punctuation (often mid-word or mid-clause). Such output is
+        unusable in production, so it is flagged and penalized in ``overall``.
+        An empty generation is not "truncated" — it is handled as a failure
+        elsewhere — so it returns False.
+        """
+        stripped = (text or "").rstrip()
+        if not stripped:
+            return False
+        return _SENTENCE_FINAL_RE.search(stripped) is None
+
+    # ── Semantic coherence (paragraph-level n-gram diversity) ─
+
+    def _semantic_coherence(self, text: str) -> float:
+        """Paragraph-level bigram diversity, 0 (heavy recycling) .. 10 (diverse).
+
+        Measures how much adjacent paragraphs recycle each other's phrasing via
+        the Jaccard distance between their word-bigram sets: 1.0 means the two
+        paragraphs share no bigrams (fully distinct), 0.0 means identical
+        phrasing. The score is the mean distance across all adjacent pairs,
+        scaled to 0-10. This catches paragraph-level recycling that the
+        surface crutch-word metric misses, without needing BERTScore.
+
+        Returns a neutral-good 10.0 when there are fewer than two comparable
+        paragraphs (nothing to recycle).
+        """
+        paras = [p for p in re.split(r"\n\s*\n", text or "") if len(_words(p)) >= 10]
+        if len(paras) < 2:
+            return 10.0
+
+        def _bigrams(p: str) -> set[tuple[str, str]]:
+            ws = [w.lower() for w in _words(p)]
+            return set(zip(ws, ws[1:]))
+
+        grams = [_bigrams(p) for p in paras]
+        distances = []
+        for a, b in zip(grams, grams[1:]):
+            union = a | b
+            if not union:
+                continue
+            distances.append(1.0 - len(a & b) / len(union))   # Jaccard distance
+        if not distances:
+            return 10.0
+        return _clamp(sum(distances) / len(distances) * 10.0)
+
 
 # ── CLI report ──────────────────────────────────────────────
 
@@ -391,6 +457,8 @@ def format_report(text: str, metrics: dict[str, Any], *, label: str = "") -> str
         f"  Dialogue ratio       : {metrics['dialogue_ratio'] * 100:.1f}%",
         f"  Pacing balance (CV)  : {pacing_str}   (lower is better)",
         f"  Repetition score     : {metrics['repetition_score']:.1f}/10   (lower is better)",
+        f"  Coherence score      : {metrics['coherence_score']:.1f}/10   (higher is better)",
+        f"  Truncated mid-sentence: {'YES — clipped!' if metrics['truncated'] else 'no'}",
         f"{'─' * 56}",
         "  Sub-scores (0-10, higher better):",
     ]
