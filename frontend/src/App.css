@@ -465,6 +465,26 @@ textarea {
   min-height: 400px;
 }
 
+.novel-mode-indicator {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.novel-mode-indicator strong {
+  display: block;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.novel-mode-indicator span {
+  color: var(--text-secondary);
+}
+
 /* ===== Streaming Viewer ===== */
 .streaming-viewer {
   background: var(--bg-card);
@@ -546,6 +566,178 @@ textarea {
   padding: 16px;
   border-radius: var(--radius);
   margin-top: 16px;
+}
+
+.novel-panel {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+details.novel-panel summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.novel-panel h3,
+.novel-section h3,
+.novel-section h4,
+.novel-card h4 {
+  margin-bottom: 8px;
+}
+
+.bible-summary {
+  margin-bottom: 18px;
+}
+
+.bible-summary p,
+.novel-section p,
+.novel-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.bible-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.bible-meta span {
+  padding: 4px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.novel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.novel-card {
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.novel-section {
+  margin-top: 18px;
+}
+
+.compact-list,
+.chapter-status-list,
+.critique-list,
+.beat-list {
+  list-style-position: inside;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.compact-list li,
+.chapter-status-list li,
+.critique-list li,
+.beat-list li {
+  margin-top: 8px;
+}
+
+.beat-list {
+  list-style-position: outside;
+  padding-left: 20px;
+}
+
+.beat-list p {
+  margin-top: 4px;
+}
+
+.beat-list small {
+  color: var(--text-muted);
+}
+
+.chapter-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 12px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.chapter-progress-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.chapter-progress-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.critique-list {
+  list-style: none;
+}
+
+.critique-list li {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.critique-list blockquote {
+  margin: 8px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-light);
+  color: var(--text-muted);
+  font-family: var(--font-story);
+  font-size: 0.9rem;
+}
+
+.critique-fix {
+  color: var(--accent) !important;
+}
+
+.severity-badge {
+  display: inline-flex;
+  margin-right: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.severity-badge.critical {
+  background: rgba(196, 77, 77, 0.18);
+  color: #e98686;
+}
+
+.severity-badge.high {
+  background: rgba(218, 133, 55, 0.18);
+  color: #e0a05f;
+}
+
+.severity-badge.medium {
+  background: rgba(212, 168, 83, 0.18);
+  color: var(--accent);
+}
+
+.severity-badge.low {
+  background: rgba(76, 130, 190, 0.18);
+  color: #8bb7e0;
 }
 
 /* ===== Library ===== */
@@ -657,6 +849,41 @@ textarea {
   white-space: pre-wrap;
 }
 
+.story-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.story-tabs button {
+  padding: 10px 16px;
+  background: none;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.story-tabs button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.story-tab-panel {
+  color: var(--text-primary);
+}
+
+.story-tab-empty {
+  padding: 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  text-align: center;
+}
+
 .story-view .story-actions {
   margin-top: 32px;
   display: flex;
@@ -756,6 +983,10 @@ textarea {
   }
 
   .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .novel-grid {
     grid-template-columns: 1fr;
   }
 

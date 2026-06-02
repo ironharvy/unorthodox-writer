@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { GenerateRequest } from '../api/types';
 import { getUser } from '../api/client';
 
 interface StoryInputProps {
   onSubmit: (req: GenerateRequest) => void;
   isGenerating: boolean;
+  onMaxWordsChange?: (maxWords: number) => void;
 }
 
 const GENRES = [
@@ -38,7 +39,11 @@ const POVS = [
   'Third Person Omniscient',
 ];
 
-export default function StoryInput({ onSubmit, isGenerating }: StoryInputProps) {
+export default function StoryInput({
+  onSubmit,
+  isGenerating,
+  onMaxWordsChange,
+}: StoryInputProps) {
   const user = getUser();
   const isFree = user?.tier === 'free';
   const maxWords = isFree ? 500 : 5000;
@@ -48,6 +53,10 @@ export default function StoryInput({ onSubmit, isGenerating }: StoryInputProps) 
   const [style, setStyle] = useState('Descriptive');
   const [pov, setPov] = useState('Third Person Limited');
   const [wordCount, setWordCount] = useState(isFree ? 500 : 1000);
+
+  useEffect(() => {
+    onMaxWordsChange?.(wordCount);
+  }, [onMaxWordsChange, wordCount]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
