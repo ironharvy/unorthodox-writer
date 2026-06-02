@@ -1,0 +1,130 @@
+[
+  {
+    "schema_version": 1,
+    "idea_id": "20260602-2002-001",
+    "generated_at": "2026-06-02T20:02:44.492459+00:00",
+    "generated_by": "dreamer",
+    "model_used": "deepseek-chat",
+    "signal": "The optimized prompt produced a composite delta of -0.011 ± 0.010 and the report verdict reads '✗ optimized prompt scored lower' (optimized_v2_verify.log:1909). All three seeds regressed: seed 23 composite -0.019, seed 37 composite -0.015, seed 9 composite +0.003 (optimized_v2_verify.log:1902-1904). The MIPROv2 instruction optimizer is actively degrading output quality relative to the unoptimized baseline.",
+    "proposal": "Replace the MIPROv2 prompt optimizer with a simpler few-shot-only strategy: freeze the instruction to the current best version (optimized_v2.json:31) and instead optimize only the selection and ordering of the 8 demo examples per premise via a lightweight Bayesian search over example subsets. This eliminates the instruction-level search that is demonstrably harming scores.",
+    "category": "pipeline_architecture",
+    "evidence": [
+      "test_output/optimized_v2_report.json:429-445",
+      "test_output/optimized_v2.json:29-31"
+    ],
+    "confidence": "high",
+    "risk_band": "medium",
+    "estimated_effort": "medium",
+    "impact": "high",
+    "non_goals": [
+      "Does not propose tuning the metric function or changing the task model",
+      "Does not propose adding new demo examples or data sources"
+    ],
+    "related_ideas": [],
+    "status": "proposed"
+  },
+  {
+    "schema_version": 1,
+    "idea_id": "20260602-2002-002",
+    "generated_at": "2026-06-02T20:02:44.492459+00:00",
+    "generated_by": "dreamer",
+    "model_used": "deepseek-chat",
+    "signal": "The demo threshold (8.0) is too aggressive for the qwen3:latest task model. In optimizer_v2_verify.log:20-22, only 8 of 14 DeepSeek demos cleared 8.0 and 0 fillers were needed—but in optimizer_v2_run.log:20-21, only 7 cleared 8.0 and 1 filler was used. Both runs discard 6-7 high-quality demos (overall scores 7.4-7.9) that are still above the qwen model's own baseline (8.08 and 8.37 respectively). This starves the few-shot pool and makes the prompt brittle.",
+    "proposal": "Lower the demo quality threshold from 8.0 to 7.5 for the qwen3:latest task model, or make it configurable per task_model. This would retain 12-14 demos per run instead of 8, giving the few-shot mechanism more diverse examples to learn from and reducing variance between seeds.",
+    "category": "quality_gate",
+    "evidence": [
+      "test_output/optimizer_v2_run.log:20-21",
+      "test_output/optimizer_v2_verify.log:20-22",
+      "test_output/optimizer_v2_verify.log:30"
+    ],
+    "confidence": "high",
+    "risk_band": "low",
+    "estimated_effort": "small",
+    "impact": "medium",
+    "non_goals": [
+      "Does not propose changing the demo generation model (DeepSeek) or the scoring rubric",
+      "Does not propose removing the threshold entirely"
+    ],
+    "related_ideas": [],
+    "status": "proposed"
+  },
+  {
+    "schema_version": 1,
+    "idea_id": "20260602-2002-003",
+    "generated_at": "2026-06-02T20:02:44.492459+00:00",
+    "generated_by": "dreamer",
+    "model_used": "deepseek-chat",
+    "signal": "Every generated story across all test files is truncated mid-sentence with '[clipped]' markers (compare_nemotron-3-nano_4b.md:3-5, compare_qwen3.6_27b.md:3-13, compare_qwen3_latest.md:3-9, ollama_novel_smoke.md:6-30, optimized_v2_editorial.md:16-256). The instruction in optimized_v2.json:31 says '~250 words' but the actual token limit is being hit mid-paragraph, producing incomplete prose that cannot be used in production.",
+    "proposal": "Add an explicit 'Do not exceed 250 words. If you reach the limit, finish the current sentence cleanly—never truncate mid-sentence or mid-paragraph.' guard to the instruction field. Alternatively, implement a post-generation truncation pass that discards any story ending with an incomplete sentence and requests a regenerate.",
+    "category": "quality_gate",
+    "evidence": [
+      "test_output/compare_nemotron-3-nano_4b.md:3-5",
+      "test_output/compare_qwen3.6_27b.md:3-13",
+      "test_output/compare_qwen3_latest.md:3-9",
+      "test_output/optimized_v2.json:31"
+    ],
+    "confidence": "high",
+    "risk_band": "low",
+    "estimated_effort": "small",
+    "impact": "high",
+    "non_goals": [
+      "Does not propose increasing the word target or changing the model's max tokens parameter",
+      "Does not propose a different truncation strategy for long-form chapter generation"
+    ],
+    "related_ideas": [],
+    "status": "proposed"
+  },
+  {
+    "schema_version": 1,
+    "idea_id": "20260602-2002-004",
+    "generated_at": "2026-06-02T20:02:44.492459+00:00",
+    "generated_by": "dreamer",
+    "model_used": "deepseek-chat",
+    "signal": "The editorial review (optimized_v2_editorial.md:3) explicitly warns that 'Crutch-word counting can reward prompts that merely avoid specific phrases rather than tell better stories.' The aggregate report (optimized_v2_report.json:5) repeats this warning. The artifact score—which measures crutch phrases—improved slightly (delta -0.136, optimized_v2_report.json:440) while overall quality regressed (delta -0.017, optimized_v2_report.json:438). The metric is optimizing for the wrong signal.",
+    "proposal": "Replace the artifact/crutch-word sub-metric with a semantic coherence metric (e.g., BERTScore or a simple repetition-penalty measure like n-gram diversity at the paragraph level). The current artifact metric penalizes surface-level phrases but does not capture the actual prose quality regression visible in the editorial review.",
+    "category": "quality_gate",
+    "evidence": [
+      "test_output/optimized_v2_editorial.md:3-6",
+      "test_output/optimized_v2_report.json:5",
+      "test_output/optimized_v2_report.json:438-440"
+    ],
+    "confidence": "medium",
+    "risk_band": "medium",
+    "estimated_effort": "large",
+    "impact": "medium",
+    "non_goals": [
+      "Does not propose removing the overall score or changing the task model",
+      "Does not propose a human-in-the-loop evaluation for every optimization run"
+    ],
+    "related_ideas": [],
+    "status": "proposed"
+  },
+  {
+    "schema_version": 1,
+    "idea_id": "20260602-2002-005",
+    "generated_at": "2026-06-02T20:02:44.492459+00:00",
+    "generated_by": "dreamer",
+    "model_used": "deepseek-chat",
+    "signal": "The two optimization runs used different task models (qwen3.6:27b in optimizer_v2_run.log:2 vs qwen3:latest in optimizer_v2_verify.log:2) and produced different baseline scores (8.37 vs 8.08) and different optimization outcomes (no significant change vs degradation). The smaller qwen3:latest model (optimizer_v2_verify.log:1909 verdict '✗ optimized prompt scored lower') is more sensitive to instruction changes than the larger qwen3.6:27b (optimized_v2_report.json:444 verdict '≈ no significant change').",
+    "proposal": "Adopt a tiered model policy: use qwen3.6:27b (or larger) as the primary task model for prompt optimization runs where instruction changes are being evaluated, and reserve qwen3:latest for final inference serving only. This ensures optimization decisions are made on a model stable enough to reflect genuine instruction improvements rather than noise.",
+    "category": "tier_policy",
+    "evidence": [
+      "test_output/optimizer_v2_run.log:2",
+      "test_output/optimizer_v2_verify.log:2",
+      "test_output/optimizer_v2_run.log:29",
+      "test_output/optimizer_v2_verify.log:30",
+      "test_output/optimized_v2_report.json:444",
+      "test_output/optimizer_v2_verify.log:1909"
+    ],
+    "confidence": "medium",
+    "risk_band": "low",
+    "estimated_effort": "small",
+    "impact": "medium",
+    "non_goals": [
+      "Does not propose changing the demo generation model (DeepSeek) or the prompt optimization algorithm",
+      "Does not propose eliminating qwen3:latest from the pipeline entirely"
+    ],
+    "related_ideas": [],
+    "status": "proposed"
+  }
+]

@@ -50,6 +50,7 @@ class OllamaBackend:
         model: Optional[str] = None,
         timeout: float = 600.0,
         num_ctx: Optional[int] = None,
+        num_predict: Optional[int] = None,
         temperature: float = 0.7,
         top_p: float = 0.9,
         think: Optional[bool] = None,
@@ -61,6 +62,13 @@ class OllamaBackend:
             timeout: per-request timeout in seconds.
             num_ctx: context window size in tokens (env: ``OLLAMA_NUM_CTX``,
                 default 8192). Must be large enough to hold the prompt + reply.
+            num_predict: max tokens to generate (env: ``OLLAMA_NUM_PREDICT``).
+                ``None`` (default) leaves Ollama's own default in place — the
+                chat endpoint generates until EOS, so the model finishes its
+                sentence rather than being clipped mid-thought. Set this only to
+                impose an explicit cap; give it enough headroom that the prompt's
+                "finish the current sentence cleanly" guard can take effect (a
+                ~250-word story needs ~400+ tokens), or stories will truncate.
             temperature: sampling temperature.
             top_p: nucleus sampling cutoff.
             think: enable the model's chain-of-thought. Defaults to ``False``

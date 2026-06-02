@@ -1,0 +1,95 @@
+{
+  "title": "The Keeper's Signal",
+  "logline": "A lighthouse keeper discovers the light he guards is not just a warning, but a call to something ancient and hungry.",
+  "pov": "first_person present tense",
+  "tone": "Atmospheric and claustrophobic, with a slow-burn dread that seeps into the bones. The prose is precise, grounded in the cold, wet reality of the coast, with a lyrical undercurrent of unease.",
+  "themes": [
+    "Isolation and connection",
+    "The cost of witnessing truth",
+    "The burden of responsibility"
+  ],
+  "protagonist": {
+    "name": "Eli",
+    "age": 37,
+    "traits": "Prone to solitude, observant, methodical",
+    "flaw": "Cannot let go of the past, especially the death of his wife",
+    "voice": "Dry, precise, with a quiet melancholy",
+    "want": "To believe the light is just a light",
+    "need": "To find peace with the memory of his wife",
+    "arc": "From clinging to routine to accepting the unknown"
+  },
+  "characters": [
+    {
+      "name": "Mara",
+      "role": "A fisherman who visits the lighthouse",
+      "traits": "Rough, cynical, with a hidden reverence for the sea",
+      "voice": "Gruff and terse, with a dry wit",
+      "want": "To escape the sea's grip"
+    },
+    {
+      "name": "The Watcher",
+      "role": "An entity that answers the lighthouse's light",
+      "traits": "Voiceless, shapeless, ancient",
+      "voice": "A whisper in the wind, a pulse in the dark",
+      "want": "To be acknowledged"
+    }
+  ],
+  "setting": {
+    "world_name": "The Hollow Coast",
+    "era": "Present day",
+    "locations": [
+      "The Lighthouse",
+      "The Hollow Beach",
+      "The Old Signal Station"
+    ],
+    "atmosphere": "Cold, damp, with a persistent mist that clings to the shore",
+    "world_rules": [
+      "The lighthouse light is not a tool but a signal that summons something ancient",
+      "The light can only be seen by those who have lost something",
+      "To acknowledge the light is to invite the Watcher"
+    ]
+  },
+  "motifs": [
+    "The lighthouse beam",
+    "The whisper in the wind",
+    "The absence of sound"
+  ],
+  "chapters": [
+    {
+      "number": 1,
+      "title": "The First Whisper",
+      "synopsis": "Eli notices the light flickering in a pattern he does not recall setting. He dismisses it as a faulty bulb, but the pattern repeats. Mara visits and warns him of the sea's hunger. Eli ignores her, but the light continues to change.",
+      "emotional_beat": "A creeping sense of unease, the reader feels Eli's isolation and the weight of his grief",
+      "must_include": [
+        "The light flickers in a pattern",
+        "Mara warns of the sea's hunger"
+      ],
+      "ends_on": "The light pulses once more, and Eli feels it in his chest",
+      "word_target": 166
+    },
+    {
+      "number": 2,
+      "title": "The Watcher's Call",
+      "synopsis": "Eli begins to see the light's pattern as a language. He records it, but the lighthouse's light grows brighter. The Watcher's whisper becomes louder, and Eli begins to hear his wife's voice in it. Mara returns, urging him to stop, but Eli is drawn deeper into the mystery.",
+      "emotional_beat": "A sense of inevitability, the reader feels the pull of the unknown and the cost of curiosity",
+      "must_include": [
+        "Eli hears his wife's voice",
+        "The light becomes unbearable"
+      ],
+      "ends_on": "Eli's hands tremble as he turns the light toward the sea",
+      "word_target": 166
+    },
+    {
+      "number": 3,
+      "title": "The Last Light",
+      "synopsis": "The Watcher arrives, a shapeless mass of shadow and hunger. Eli must choose: to let the light continue or to silence it. He chooses to end it, but the light returns stronger. Mara watches in silence as the lighthouse burns, and Eli is left with the knowledge that some truths cannot be undone.",
+      "emotional_beat": "A final, devastating realization, the reader feels the cost of truth and the weight of choice",
+      "must_include": [
+        "Eli silences the light",
+        "The lighthouse burns"
+      ],
+      "ends_on": "The sea is still, and the light is gone",
+      "word_target": 166
+    }
+  ]
+}
