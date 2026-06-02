@@ -8,10 +8,13 @@ import type { GenerateRequest } from '../api/types';
 export default function Creator() {
   const [storyId, setStoryId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [maxWords, setMaxWords] = useState(1000);
   const { events, isStreaming, error, stop } = useSSE(storyId);
+  const usesNovelPipeline = maxWords > 2000;
 
   const handleSubmit = async (req: GenerateRequest) => {
     setIsGenerating(true);
+    setMaxWords(req.max_words);
     try {
       const story = await generateStory(req);
       setStoryId(story.id);
@@ -34,7 +37,17 @@ export default function Creator() {
         <StoryInput
           onSubmit={handleSubmit}
           isGenerating={showGenerating}
+          onMaxWordsChange={setMaxWords}
         />
+        {usesNovelPipeline && (
+          <div className="novel-mode-indicator">
+            <strong>Novel pipeline enabled</strong>
+            <span>
+              This request will generate a story bible, chapter drafts, editorial notes,
+              and a revision pass.
+            </span>
+          </div>
+        )}
         {isDone && (
           <div style={{ marginTop: 16 }}>
             <button
