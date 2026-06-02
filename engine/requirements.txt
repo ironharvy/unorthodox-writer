@@ -1,0 +1,7 @@
+# Story Engine — required dependencies
+httpx>=0.25.0
+
+# Optional: cloud backends
+# Uncomment as needed:
+# anthropic>=0.30.0
+# openai>=1.30.0

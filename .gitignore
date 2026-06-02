@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+.eggs/
+*.egg
+.venv/
+venv/
+backend/.venv/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Database
+*.db
+*.db-journal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Output artifacts
+*.log
+verify_*.md
+verify_*.json
+novel_draft.md
+chapter_summaries.json
+revised_chapters.json
+revised2_*.json
+
+# Env
+.env
+backend/.env.local
+
+# Cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated stories (keep novel.md?)
+novel_draft.log
+novel_gen.log
+novel_expand.log
+novel_revise.log
+novel_revise2.log

@@ -1,0 +1,145 @@
+{
+  "title": "The Keeper of the Last Light",
+  "logline": "A lighthouse keeper discovers the beam he tends is a portal to a dying world, and must choose between saving a stranger and losing himself.",
+  "tone": "Weathered and precise, with a prose texture like salt-crusted glass. Sentences are short and observational, but carry an undercurrent of longing. The mood is melancholic and watchful, like a man staring into fog.",
+  "themes": [
+    "loneliness and connection",
+    "the cost of duty",
+    "the nature of light and darkness"
+  ],
+  "protagonist": {
+    "name": "Elias Voss",
+    "age": 52,
+    "voice": "Blunt, self-deprecating, observant. He describes the world in terms of light and weather. His narration is haunted by a past failure he never names directly.",
+    "wound": "He let his wife die in a storm because he misread the sea. He has not left the lighthouse in 14 years.",
+    "want": "To keep the light burning perfectly, as atonement.",
+    "need": "To forgive himself and accept that some things are beyond his control.",
+    "arc": "From a man paralyzed by guilt and routine to someone who makes a deliberate, costly choice to trust another."
+  },
+  "characters": [
+    {
+      "name": "Mira",
+      "role": "A woman from the other world, a cartographer of the dead",
+      "voice": "Urgent, precise, with a formal cadence. She uses metaphors of mapping and navigation. She is exhausted but determined.",
+      "want": "To save her world from the encroaching dark by finding a new source of light."
+    }
+  ],
+  "setting": {
+    "lighthouse_name": "Grave Point Light",
+    "location_era": "Isolated coast, ambiguous late 19th or early 20th century",
+    "the_other_world": "Umbra, a world of perpetual twilight where the sky is a bruised violet and the ground is made of compressed ash. The inhabitants live in fear of the 'Stilling,' a slow freezing of light and life.",
+    "portal_rules": [
+      "The portal opens only when the lighthouse beam is at its brightest (the exact moment the lens rotates to face the sea).",
+      "Only living things can pass through, and only if they are touching the lens at that moment.",
+      "While the portal is open, the lighthouse beam is invisible to ships; the keeper must choose between the portal and the sea.",
+      "Each crossing drains a measure of the keeper's vitality—visible as a gray streak in the hair or a deepening of lines."
+    ]
+  },
+  "motifs": [
+    "the rhythm of the lens rotation",
+    "salt crust on glass",
+    "the sound of foghorns",
+    "ash and dust",
+    "maps drawn on skin"
+  ],
+  "chapters": [
+    {
+      "number": 1,
+      "title": "The Light That Never Sleeps",
+      "synopsis": "Elias performs his nightly ritual: checking the lens, winding the clockwork, polishing the glass. He notices a faint shimmer in the beam at the moment of rotation, but dismisses it. Later, he finds a strange ash on the floor.",
+      "emotional_beat": "Quiet unease, the weight of routine, a hint of mystery.",
+      "must_include": [
+        "description of the lighthouse mechanism",
+        "the first shimmer",
+        "the ash"
+      ],
+      "ends_on": "Elias touches the ash and feels a faint warmth, then a cold dread."
+    },
+    {
+      "number": 2,
+      "title": "The Ash and the Map",
+      "synopsis": "Elias experiments with the beam and discovers the portal. He steps through briefly and sees Umbra: a vast ashen plain under a violet sky. He meets Mira, who is drawing a map of the dead. She explains the Stilling and begs for his help. He retreats, shaken.",
+      "emotional_beat": "Wonder and fear, the shock of the new.",
+      "must_include": [
+        "first crossing",
+        "description of Umbra",
+        "meeting Mira",
+        "the Stilling explained"
+      ],
+      "ends_on": "Elias back in the lighthouse, staring at his own reflection, seeing a single gray hair at his temple."
+    },
+    {
+      "number": 3,
+      "title": "The Cartographer's Bargain",
+      "synopsis": "Elias returns to Umbra multiple times, learning its rules. Mira shows him the 'Last Light,' a dying sun. She believes the lighthouse beam can reignite it. Elias is skeptical but intrigued. He notices the gray streaks in his hair multiplying.",
+      "emotional_beat": "Growing curiosity mixed with dread, the seduction of purpose.",
+      "must_include": [
+        "Elias mapping the portal's timing",
+        "Mira's theory about the beam",
+        "physical cost becoming visible"
+      ],
+      "ends_on": "Mira touches Elias's hand and says, 'I have been alone longer than you.' He does not pull away."
+    },
+    {
+      "number": 4,
+      "title": "The Storm Season",
+      "synopsis": "A storm approaches the coast. Elias must keep the light burning for ships, but the portal opens only at the beam's peak. He tries to maintain both, but a ship nearly wrecks. He realizes he cannot serve two worlds. Mira urges him to choose Umbra.",
+      "emotional_beat": "Tension, the pressure of impossible duty.",
+      "must_include": [
+        "storm description",
+        "near shipwreck",
+        "Elias's internal conflict"
+      ],
+      "ends_on": "Elias screams at Mira to leave, then stands alone in the rain, knowing he has failed both worlds."
+    },
+    {
+      "number": 5,
+      "title": "The Weight of Ash",
+      "synopsis": "Elias refuses to open the portal for days. He polishes the lens obsessively. Mira appears on the lighthouse stairs, having crossed without his help—she is fading, translucent. She reveals that the Stilling has reached her; she has days left. Elias relents.",
+      "emotional_beat": "Guilt, desperation, a turning point.",
+      "must_include": [
+        "Mira's fading",
+        "Elias's breakdown",
+        "decision to help"
+      ],
+      "ends_on": "Elias opens the portal and steps through, leaving the lighthouse dark for the first time in 14 years."
+    },
+    {
+      "number": 6,
+      "title": "The Dying Sun",
+      "synopsis": "In Umbra, Elias sees the Last Light—a dim ember in a cage of bone. Mira explains that to reignite it, he must pour his own light into it, meaning he must stay in Umbra permanently. The lighthouse will go dark. Elias hesitates, thinking of the ships.",
+      "emotional_beat": "Awe, horror, the weight of the choice.",
+      "must_include": [
+        "description of the Last Light",
+        "the cost explained",
+        "Elias thinking of the sea"
+      ],
+      "ends_on": "Mira says, 'The ships have other lights. I have only you.'"
+    },
+    {
+      "number": 7,
+      "title": "The Keeper's Choice",
+      "synopsis": "Elias returns to the lighthouse one last time. He writes a letter to the maritime authorities, confessing his neglect. He polishes the lens, then smashes the clockwork so it cannot be repaired. He steps into the portal with Mira, and the light goes out forever.",
+      "emotional_beat": "Resignation, grief, a strange peace.",
+      "must_include": [
+        "the letter",
+        "smashing the clockwork",
+        "final crossing"
+      ],
+      "ends_on": "The lighthouse falls dark, and Elias watches from Umbra as a ship passes safely by moonlight."
+    },
+    {
+      "number": 8,
+      "title": "The Last Light",
+      "synopsis": "Elias pours his life into the Last Light. It flickers, then glows steadily. Mira's form solidifies. They stand together as the ashen plain begins to bloom with tiny phosphorescent plants. Elias feels his body aging rapidly, but he is at peace. The final image: a new constellation of lights across Umbra, each a keeper who came before.",
+      "emotional_beat": "Bittersweet hope, sacrifice, renewal.",
+      "must_include": [
+        "the reignition",
+        "Elias's aging",
+        "the blooms",
+        "the constellation of keepers"
+      ],
+      "ends_on": "Elias looks at Mira, and she smiles. He does not regret a thing."
+    }
+  ]
+}
