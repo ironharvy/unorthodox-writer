@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unorthodox-writer.local/schemas/idea-contract.schema.json",
+  "title": "Idea Contract",
+  "description": "A single candidate improvement proposed by the Dreamer research agent. Each contract is a read-only proposal that documents a pattern found in project telemetry and a concrete change to consider. The Dreamer never modifies code and never approves its own ideas — every contract stays in the 'proposed' state until a human reviews it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "idea_id",
+    "generated_at",
+    "generated_by",
+    "model_used",
+    "signal",
+    "proposal",
+    "category",
+    "evidence",
+    "confidence",
+    "risk_band",
+    "estimated_effort",
+    "impact",
+    "non_goals",
+    "related_ideas",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Schema version for forward compatibility."
+    },
+    "idea_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}-[0-9]{4}-[0-9]{3}$",
+      "description": "Stable identifier of the form YYYYMMDD-HHMM-NNN, where NNN is the 1-based index within the run that produced it. Unique across the corpus."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp (UTC) when the contract was produced."
+    },
+    "generated_by": {
+      "const": "dreamer",
+      "description": "The agent that authored the contract. Always 'dreamer'."
+    },
+    "model_used": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The reasoning model that proposed the idea (e.g. 'deepseek-chat')."
+    },
+    "signal": {
+      "type": "string",
+      "minLength": 12,
+      "description": "The pattern observed in the telemetry that motivates the proposal. Should be specific and falsifiable, not a vague hunch."
+    },
+    "proposal": {
+      "type": "string",
+      "minLength": 12,
+      "description": "The concrete, actionable change to consider in response to the signal. Not a vague suggestion."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "model_selection",
+        "prompt_engineering",
+        "pipeline_architecture",
+        "quality_gate",
+        "tier_policy",
+        "new_feature"
+      ],
+      "description": "The area of the system the proposal touches."
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "One or more references to real evidence files, each ideally with a line or line-range (e.g. 'test_output/optimized_v2_report.json:104-107'). Every reference must point to a file the Dreamer actually read; hallucinated evidence is rejected before a contract is saved."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "How strongly the available evidence supports the signal."
+    },
+    "risk_band": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "How risky the proposed change would be to adopt (regressions, user impact, irreversibility)."
+    },
+    "estimated_effort": {
+      "type": "string",
+      "enum": ["small", "medium", "large"],
+      "description": "Rough engineering effort to implement the proposal."
+    },
+    "impact": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Expected upside if the proposal works as intended."
+    },
+    "non_goals": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "What this proposal explicitly does NOT cover, to keep its scope honest."
+    },
+    "related_ideas": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9]{8}-[0-9]{4}-[0-9]{3}$"
+      },
+      "description": "idea_id values of earlier contracts this one builds on or relates to. Empty on the first run."
+    },
+    "status": {
+      "const": "proposed",
+      "description": "Lifecycle state. The Dreamer always emits 'proposed'; only a human may advance a contract beyond this."
+    }
+  }
+}
