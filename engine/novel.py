@@ -276,15 +276,31 @@ class NovelPipeline:
             and per-chapter targets are derived from it.
     """
 
-    def __init__(self, backend, max_chapters: int = 15, target_words: int = 20000):
+    def __init__(
+        self,
+        backend,
+        max_chapters: int = 15,
+        target_words: int = 20000,
+        n_chapters: Optional[int] = None,
+        min_words_per_chapter: int = 400,
+    ):
         self.backend = backend
         self.max_chapters = max(2, int(max_chapters))
-        self.target_words = max(2000, int(target_words))
 
-        # ~1800 words/chapter feels like a chapter; clamp to [2, max_chapters].
-        approx = round(self.target_words / 1800) or 1
-        self.n_chapters = max(2, min(self.max_chapters, approx))
-        self.words_per_chapter = max(400, self.target_words // self.n_chapters)
+        # By default this is a novel-length engine: the target is floored at
+        # 2000 words and the chapter count is derived at ~1800 words/chapter.
+        # Passing an explicit ``n_chapters`` opts out of both floors so a small,
+        # fast multi-chapter run can be produced (free-tier/test smoke runs that
+        # want e.g. 3 short chapters totalling 500 words).
+        if n_chapters is not None:
+            self.target_words = max(1, int(target_words))
+            self.n_chapters = max(2, min(self.max_chapters, int(n_chapters)))
+        else:
+            self.target_words = max(2000, int(target_words))
+            # ~1800 words/chapter feels like a chapter; clamp to [2, max_chapters].
+            approx = round(self.target_words / 1800) or 1
+            self.n_chapters = max(2, min(self.max_chapters, approx))
+        self.words_per_chapter = max(int(min_words_per_chapter), self.target_words // self.n_chapters)
 
         self.retries = 5
         # Does this backend's generate_full accept a json_mode kwarg?
@@ -292,7 +308,7 @@ class NovelPipeline:
             self._supports_json = "json_mode" in inspect.signature(
                 backend.generate_full
             ).parameters
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, AttributeError):
             self._supports_json = False
 
     async def close(self) -> None:
@@ -445,13 +461,35 @@ class NovelPipeline:
                             yield ev
 
                     fixed = fixed.strip()
+                    # Guard against a model that returns blank or truncated
+                    # prose: a revision must never destroy a chapter. If the
+                    # rewrite comes back under half the original's length, keep
+                    # the original chapter (and its recap) untouched.
+                    original_wc = _count_words(chapters[n])
+                    fixed_wc = _count_words(fixed)
+                    if not self._revision_acceptable(chapters[n], fixed):
+                        logger.warning(
+                            "Chapter %d revision rejected: %d words vs original %d "
+                            "(<50%%) — keeping original.", n, fixed_wc, original_wc,
+                        )
+                        yield {
+                            "type": "progress",
+                            "phase": "revising",
+                            "chapter": n,
+                            "message": (
+                                f"Revision of chapter {n} came back too short "
+                                f"({fixed_wc} vs {original_wc} words) — keeping the original."
+                            ),
+                        }
+                        continue
+
                     chapters[n] = fixed
                     recaps[n] = await self._recap(beat, fixed)
                     yield {
                         "type": "revision",
                         "chapter": n,
                         "fixed": fixed,
-                        "word_count": _count_words(fixed),
+                        "word_count": fixed_wc,
                     }
             else:
                 yield {
@@ -688,6 +726,14 @@ CURRENT VERSION OF THE CHAPTER (revise this):
 {original}"""
 
         return self._stream(_REVISE_SYSTEM.format(genre=genre, style=style), user, label=f"revise ch{beat.number}")
+
+    @staticmethod
+    def _revision_acceptable(original: str, fixed: str, min_ratio: float = 0.5) -> bool:
+        """A revision is accepted only if it retains at least ``min_ratio`` of
+        the original chapter's word count. Blank or truncated rewrites are
+        rejected so a bad revision can never destroy a chapter.
+        """
+        return _count_words(fixed) >= max(1, _count_words(original)) * min_ratio
 
     # ── assembly ─────────────────────────────────────────────
 

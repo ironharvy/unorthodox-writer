@@ -10,6 +10,23 @@ Each template supports python .format(**kwargs) with keys:
 """
 
 # ──────────────────────────────────────────────
+# Shared anti-artifact / prose-quality guardrails
+# ──────────────────────────────────────────────
+# Injected into the drafting and polishing templates so short stories get the
+# same anti-cliché discipline the NovelPipeline applies to chapter prose.
+# Contains no ``{}`` placeholders, so it is safe to concatenate into templates
+# that are later rendered with str.format(**kwargs).
+
+PROSE_RULES = """PROSE GUARDRAILS (apply throughout — these matter as much as the plot):
+- Vary sentence length and rhythm; never settle into a uniform cadence.
+- Do NOT use AI crutch transitions: "however", "moreover", "furthermore", "in conclusion", "indeed", "it was then that".
+- Avoid cliché and purple metaphor pile-ups (e.g. "tapestry", "testament to", "navigate the complexities", "delve").
+- Do not lean on three-part anaphora (three consecutive sentences/clauses opening the same way).
+- Keep dialogue spoken-sounding, not expository.
+- Reuse no distinctive image, metaphor, or phrase more than once — fresh language each time."""
+
+
+# ──────────────────────────────────────────────
 # Stage 1: EXPAND
 # Takes raw user input (fragment, idea, lyrics) → story premise
 # ──────────────────────────────────────────────
@@ -141,6 +158,8 @@ Key points to include: {key_points}
 
 CRITICAL LENGTH REQUIREMENT: You MUST write at least {section_words} words for this section. This is non-negotiable. If you write less, the story will be incomplete. Count your words after writing. Use rich description, dialogue, internal monologue, and sensory detail to reach the target. Do not pad — every word should advance the story.
 
+""" + PROSE_RULES + """
+
 Write this section now. Maintain consistent tone, character voices, and pacing with what came before. End with a natural transition or hook. Do not include section headers or meta-commentary — just the prose."""
 
 DRAFT_SECTION_TEMPLATE_COMPACT = """Write the next section of a {genre} story in {style} style, {pov} POV.
@@ -153,6 +172,8 @@ Now write: {section_title}
 Summary: {section_summary}
 Emotion: {section_emotion}
 Key points: {key_points}
+
+""" + PROSE_RULES + """
 
 Write around {section_words} words of actual prose. No headers. Just the story."""
 
@@ -184,6 +205,8 @@ Do NOT:
 - Change the point of view
 - Add section headers or commentary
 
+""" + PROSE_RULES + """
+
 Return the complete polished story. The story must flow as one continuous narrative.
 
 Draft to polish:
@@ -192,6 +215,8 @@ Draft to polish:
 POLISH_TEMPLATE_COMPACT = """Polish this {genre} story draft. Improve prose quality, rhythm, imagery, and consistency. Maintain {style} style and {pov} POV. Target ~{max_words} words. Return the complete polished story as one continuous narrative.
 
 Do not change the plot, characters, or POV.
+
+""" + PROSE_RULES + """
 
 Draft:
 {draft}"""

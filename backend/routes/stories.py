@@ -11,7 +11,12 @@ from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from auth import get_current_user
-from config import FREE_MAX_SAVED_STORIES
+from config import (
+    FREE_MAX_SAVED_STORIES,
+    FREE_NOVEL_ENABLED,
+    FREE_NOVEL_THRESHOLD,
+    OLLAMA_MODEL_NOVEL,
+)
 from database import get_db
 from middleware.tier import check_story_creation, enforce_read_limits
 from models import User, Story
@@ -77,6 +82,7 @@ try:
     from engine.pipeline import StoryPipeline
     from engine.novel import NovelPipeline
     from engine.backends.cloud import CloudBackend
+    from engine.backends.ollama import OllamaBackend
     ENGINE_AVAILABLE = True
 except ImportError:
     ENGINE_AVAILABLE = False
@@ -86,16 +92,32 @@ except ImportError:
 def _build_pipeline(tier: str, max_words: int):
     """Pick the right pipeline for this story.
 
-    - Free tier, or paid short stories (<= NOVEL_WORD_THRESHOLD): the existing
-      single-pass StoryPipeline (Ollama for free, DeepSeek for paid).
     - Paid tier with max_words > NOVEL_WORD_THRESHOLD: the multi-phase
       NovelPipeline driving DeepSeek.
+    - Free tier with max_words > FREE_NOVEL_THRESHOLD (and FREE_NOVEL_ENABLED):
+      the multi-phase NovelPipeline driving Ollama, with a small chapter count
+      derived from the requested length.
+    - Otherwise: the single-pass StoryPipeline (Ollama for free, DeepSeek paid).
 
     Returns ``(pipeline, kind)`` where kind is "novel" or "short".
     """
     if tier != "free" and max_words > NOVEL_WORD_THRESHOLD:
         backend = CloudBackend(provider="deepseek", max_tokens=6000)
         pipeline = NovelPipeline(backend, max_chapters=20, target_words=max_words)
+        return pipeline, "novel"
+
+    if tier == "free" and FREE_NOVEL_ENABLED and max_words > FREE_NOVEL_THRESHOLD:
+        # ~600 words/chapter, capped at 6 chapters, so a free "novel" stays a
+        # fast Ollama run while still exercising the full multi-phase pipeline.
+        n_chapters = max(2, min(6, (max_words + 599) // 600))
+        backend = OllamaBackend(model=OLLAMA_MODEL_NOVEL)
+        pipeline = NovelPipeline(
+            backend,
+            max_chapters=n_chapters,
+            target_words=max_words,
+            n_chapters=n_chapters,
+            min_words_per_chapter=150,
+        )
         return pipeline, "novel"
 
     pipeline = StoryPipeline(tier=tier, cloud_provider="deepseek")
