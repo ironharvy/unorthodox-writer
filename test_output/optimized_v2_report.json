@@ -1,0 +1,453 @@
+{
+  "schema": "optimized_v2_report/1",
+  "generated_at": "2026-06-02T15:11:38+00:00",
+  "total_runtime_sec": 384.9,
+  "note": "Metric scores are fast heuristic signals for prompt optimization, not literary judgments. Crutch-word counting can reward prompts that merely avoid specific phrases rather than tell better stories. Optimized outputs should pass a human editorial review slice (see --editorial) before deployment.",
+  "config": {
+    "task_model": "qwen3:latest",
+    "task_model_id": "ollama_chat/qwen3:latest",
+    "prompt_model_id": "deepseek/deepseek-chat",
+    "ollama_url": "http://192.168.1.20:11434",
+    "num_trials": 5,
+    "num_candidates": 5,
+    "demo_threshold": 8.0,
+    "seeds": [
+      9,
+      23,
+      37
+    ],
+    "n_train_premises": 14,
+    "n_val_premises": 5,
+    "n_test_premises": 10
+  },
+  "demos": {
+    "source": "DeepSeek",
+    "count": 8,
+    "avg_overall": 8.303,
+    "threshold": 8.0,
+    "n_below_threshold": 0,
+    "items": [
+      {
+        "premise": "A retired astronaut waters the tomatoes on his balcony, counting the seconds the way he once counted re-entry.",
+        "genre": "literary",
+        "style": "quiet",
+        "overall": 8.6,
+        "artifact": 0.0,
+        "composite": 0.916,
+        "below_threshold": false
+      },
+      {
+        "premise": "A short-order cook at a desert-edge diner serves a stranger who orders only what he ate the day his daughter was born.",
+        "genre": "noir",
+        "style": "lean",
+        "overall": 8.33,
+        "artifact": 0.0,
+        "composite": 0.8998,
+        "below_threshold": false
+      },
+      {
+        "premise": "A lighthouse keeper's daughter learns to read the names of drowned sailors in the patterns of the foam.",
+        "genre": "fantasy",
+        "style": "atmospheric",
+        "overall": 8.35,
+        "artifact": 0.07,
+        "composite": 0.8982,
+        "below_threshold": false
+      },
+      {
+        "premise": "A tribunal translator begins dreaming in the language of the man whose war crimes she is condemning.",
+        "genre": "literary",
+        "style": "tense",
+        "overall": 8.4,
+        "artifact": 0.7,
+        "composite": 0.876,
+        "below_threshold": false
+      },
+      {
+        "premise": "A bomb-disposal veteran now works as a marriage counselor, until a couple sets a literal ticking box on his desk.",
+        "genre": "dark comedy",
+        "style": "wry",
+        "overall": 8.18,
+        "artifact": 0.79,
+        "composite": 0.8592,
+        "below_threshold": false
+      },
+      {
+        "premise": "On the night shift at a 24-hour laundromat, an insomniac folds strangers' clothes and finds a wedding dress that fits her exactly.",
+        "genre": "literary",
+        "style": "intimate",
+        "overall": 8.05,
+        "artifact": 0.7,
+        "composite": 0.855,
+        "below_threshold": false
+      },
+      {
+        "premise": "A border-town radio DJ takes a midnight song request from a caller who has been dead for nine years.",
+        "genre": "magical realism",
+        "style": "warm",
+        "overall": 8.19,
+        "artifact": 1.75,
+        "composite": 0.8214,
+        "below_threshold": false
+      },
+      {
+        "premise": "A girl who collects lightning in mason jars must decide whether to free the storm that took her brother.",
+        "genre": "fantasy",
+        "style": "vivid",
+        "overall": 8.32,
+        "artifact": 2.07,
+        "composite": 0.8164,
+        "below_threshold": false
+      }
+    ]
+  },
+  "baseline": {
+    "avg_overall": 8.077,
+    "avg_artifact": 1.258,
+    "avg_composite": 0.8343,
+    "elapsed_sec": 14.0,
+    "per_premise": [
+      {
+        "premise": "A cartographer is hired to map a town that appears on no other map.",
+        "overall": 9.05,
+        "artifact": 0.0,
+        "composite": 0.943
+      },
+      {
+        "premise": "A boy inherits a coat whose pockets hold other people's memories.",
+        "overall": 7.06,
+        "artifact": 5.86,
+        "composite": 0.5892
+      },
+      {
+        "premise": "A detective interrogates a suspect who answers only in descriptions of the weather.",
+        "overall": 7.91,
+        "artifact": 0.0,
+        "composite": 0.8746
+      },
+      {
+        "premise": "A widowed organist plays the cathedral empty every midnight for an audience of one he won't name.",
+        "overall": 8.14,
+        "artifact": 2.0,
+        "composite": 0.8084
+      },
+      {
+        "premise": "A deep-sea welder repairs a pipeline and hears, in the dark, singing that matches his late wife's hum.",
+        "overall": 7.92,
+        "artifact": 0.3,
+        "composite": 0.8632
+      },
+      {
+        "premise": "A florist who is losing her sense of smell presses one last bouquet for a wedding she was not invited to.",
+        "overall": 7.83,
+        "artifact": 1.4,
+        "composite": 0.8138
+      },
+      {
+        "premise": "A war photographer develops a roll of film and finds a face in the crowd that has followed her across three countries.",
+        "overall": 7.66,
+        "artifact": 2.0,
+        "composite": 0.7796
+      },
+      {
+        "premise": "On the last day of a dying carousel, the ticket-taker lets a girl ride the one horse that was never bolted down.",
+        "overall": 8.5,
+        "artifact": 0.7,
+        "composite": 0.882
+      },
+      {
+        "premise": "A locksmith who can open any door is asked to lock one shut forever, and is paid not to ask why.",
+        "overall": 8.31,
+        "artifact": 0.0,
+        "composite": 0.8986
+      },
+      {
+        "premise": "A beekeeper's son tends the hives through the winter his father stopped speaking, listening for what the bees might say back.",
+        "overall": 8.39,
+        "artifact": 0.32,
+        "composite": 0.8906
+      }
+    ]
+  },
+  "seeds": [
+    {
+      "seed": 9,
+      "optimized": {
+        "avg_overall": 8.067,
+        "avg_artifact": 1.175,
+        "avg_composite": 0.837,
+        "elapsed_sec": 21.4,
+        "per_premise": [
+          {
+            "premise": "A cartographer is hired to map a town that appears on no other map.",
+            "overall": 8.63,
+            "artifact": 0.0,
+            "composite": 0.9178
+          },
+          {
+            "premise": "A boy inherits a coat whose pockets hold other people's memories.",
+            "overall": 7.99,
+            "artifact": 2.55,
+            "composite": 0.7774
+          },
+          {
+            "premise": "A detective interrogates a suspect who answers only in descriptions of the weather.",
+            "overall": 7.63,
+            "artifact": 0.7,
+            "composite": 0.8298
+          },
+          {
+            "premise": "A widowed organist plays the cathedral empty every midnight for an audience of one he won't name.",
+            "overall": 8.36,
+            "artifact": 1.21,
+            "composite": 0.8532
+          },
+          {
+            "premise": "A deep-sea welder repairs a pipeline and hears, in the dark, singing that matches his late wife's hum.",
+            "overall": 8.61,
+            "artifact": 0.0,
+            "composite": 0.9166
+          },
+          {
+            "premise": "A florist who is losing her sense of smell presses one last bouquet for a wedding she was not invited to.",
+            "overall": 8.5,
+            "artifact": 0.7,
+            "composite": 0.882
+          },
+          {
+            "premise": "A war photographer develops a roll of film and finds a face in the crowd that has followed her across three countries.",
+            "overall": 7.57,
+            "artifact": 2.92,
+            "composite": 0.7374
+          },
+          {
+            "premise": "On the last day of a dying carousel, the ticket-taker lets a girl ride the one horse that was never bolted down.",
+            "overall": 8.15,
+            "artifact": 1.4,
+            "composite": 0.833
+          },
+          {
+            "premise": "A locksmith who can open any door is asked to lock one shut forever, and is paid not to ask why.",
+            "overall": 6.94,
+            "artifact": 2.0,
+            "composite": 0.7364
+          },
+          {
+            "premise": "A beekeeper's son tends the hives through the winter his father stopped speaking, listening for what the bees might say back.",
+            "overall": 8.29,
+            "artifact": 0.27,
+            "composite": 0.8866
+          }
+        ]
+      },
+      "delta": {
+        "overall": -0.01,
+        "artifact": -0.083,
+        "composite": 0.0027
+      },
+      "num_trials_run": 6,
+      "best_trial_score": 86.14,
+      "trial_scores": [
+        76.18,
+        86.14,
+        80.82,
+        84.68,
+        80.82,
+        83.62
+      ],
+      "selected_instruction": "You are a literary fiction writer known for crafting atmospheric micro-stories that blend sensory detail with deep emotional resonance. Given a premise, genre, and style, write a concise narrative excerpt of approximately 150–250 words. Use concrete sensory language (sights, sounds, textures, smells) to evoke the scene, and incorporate the character’s interiority—their thoughts, emotions, or memories—to add depth. Match the pacing and tone to the specified style: \"quiet\" for meditative, introspective prose; \"lean\" for sparse, economical writing; \"tense\" for urgent, charged language. Avoid clichés and transitional phrases like \"however\" or \"moreover.\" Vary sentence length for rhythm. Output only the story text, with no preamble or commentary."
+    },
+    {
+      "seed": 23,
+      "optimized": {
+        "avg_overall": 7.865,
+        "avg_artifact": 1.421,
+        "avg_composite": 0.8151,
+        "elapsed_sec": 18.2,
+        "per_premise": [
+          {
+            "premise": "A cartographer is hired to map a town that appears on no other map.",
+            "overall": 7.77,
+            "artifact": 1.85,
+            "composite": 0.7922
+          },
+          {
+            "premise": "A boy inherits a coat whose pockets hold other people's memories.",
+            "overall": 6.8,
+            "artifact": 6.0,
+            "composite": 0.568
+          },
+          {
+            "premise": "A detective interrogates a suspect who answers only in descriptions of the weather.",
+            "overall": 8.06,
+            "artifact": 0.0,
+            "composite": 0.8836
+          },
+          {
+            "premise": "A widowed organist plays the cathedral empty every midnight for an audience of one he won't name.",
+            "overall": 7.74,
+            "artifact": 0.66,
+            "composite": 0.838
+          },
+          {
+            "premise": "A deep-sea welder repairs a pipeline and hears, in the dark, singing that matches his late wife's hum.",
+            "overall": 8.52,
+            "artifact": 0.63,
+            "composite": 0.886
+          },
+          {
+            "premise": "A florist who is losing her sense of smell presses one last bouquet for a wedding she was not invited to.",
+            "overall": 8.58,
+            "artifact": 0.0,
+            "composite": 0.9148
+          },
+          {
+            "premise": "A war photographer develops a roll of film and finds a face in the crowd that has followed her across three countries.",
+            "overall": 7.79,
+            "artifact": 0.56,
+            "composite": 0.845
+          },
+          {
+            "premise": "On the last day of a dying carousel, the ticket-taker lets a girl ride the one horse that was never bolted down.",
+            "overall": 8.2,
+            "artifact": 1.53,
+            "composite": 0.8308
+          },
+          {
+            "premise": "A locksmith who can open any door is asked to lock one shut forever, and is paid not to ask why.",
+            "overall": 6.55,
+            "artifact": 2.76,
+            "composite": 0.6826
+          },
+          {
+            "premise": "A beekeeper's son tends the hives through the winter his father stopped speaking, listening for what the bees might say back.",
+            "overall": 8.64,
+            "artifact": 0.22,
+            "composite": 0.9096
+          }
+        ]
+      },
+      "delta": {
+        "overall": -0.212,
+        "artifact": 0.163,
+        "composite": -0.0192
+      },
+      "num_trials_run": 6,
+      "best_trial_score": 85.88,
+      "trial_scores": [
+        76.18,
+        85.88,
+        72.78,
+        81.45,
+        84.38,
+        82.71
+      ],
+      "selected_instruction": "You are a creative writing assistant. Given a premise (a short scenario or character situation), a genre (such as literary, noir, or fantasy), and a style (such as quiet, lean, or vivid), generate a cohesive short story (~150–300 words) that expands the premise into a complete narrative. The story should adhere strictly to the genre conventions and stylistic cues: for example, \"literary\" and \"quiet\" implies contemplative, detailed, sensory-rich prose with slow pacing; \"noir\" and \"lean\" requires terse, atmospheric writing with minimal description and gritty dialogue; \"fantasy\" and \"vivid\" demands vivid imagery, metaphorical language, and emotional depth. Use concrete sensory details, real interiority (character emotions or thoughts), and varied sentence lengths. Avoid clichés, AI crutch transitions (e.g., however, moreover, furthermore), and meta-commentary. Output only the story prose, with no extra text."
+    },
+    {
+      "seed": 37,
+      "optimized": {
+        "avg_overall": 7.94,
+        "avg_artifact": 1.434,
+        "avg_composite": 0.819,
+        "elapsed_sec": 22.6,
+        "per_premise": [
+          {
+            "premise": "A cartographer is hired to map a town that appears on no other map.",
+            "overall": 8.05,
+            "artifact": 1.43,
+            "composite": 0.8258
+          },
+          {
+            "premise": "A boy inherits a coat whose pockets hold other people's memories.",
+            "overall": 7.41,
+            "artifact": 4.0,
+            "composite": 0.6846
+          },
+          {
+            "premise": "A detective interrogates a suspect who answers only in descriptions of the weather.",
+            "overall": 7.38,
+            "artifact": 0.0,
+            "composite": 0.8428
+          },
+          {
+            "premise": "A widowed organist plays the cathedral empty every midnight for an audience of one he won't name.",
+            "overall": 8.19,
+            "artifact": 0.85,
+            "composite": 0.8574
+          },
+          {
+            "premise": "A deep-sea welder repairs a pipeline and hears, in the dark, singing that matches his late wife's hum.",
+            "overall": 8.56,
+            "artifact": 0.0,
+            "composite": 0.9136
+          },
+          {
+            "premise": "A florist who is losing her sense of smell presses one last bouquet for a wedding she was not invited to.",
+            "overall": 7.67,
+            "artifact": 3.68,
+            "composite": 0.713
+          },
+          {
+            "premise": "A war photographer develops a roll of film and finds a face in the crowd that has followed her across three countries.",
+            "overall": 7.94,
+            "artifact": 1.67,
+            "composite": 0.8096
+          },
+          {
+            "premise": "On the last day of a dying carousel, the ticket-taker lets a girl ride the one horse that was never bolted down.",
+            "overall": 8.29,
+            "artifact": 0.71,
+            "composite": 0.869
+          },
+          {
+            "premise": "A locksmith who can open any door is asked to lock one shut forever, and is paid not to ask why.",
+            "overall": 7.44,
+            "artifact": 1.26,
+            "composite": 0.796
+          },
+          {
+            "premise": "A beekeeper's son tends the hives through the winter his father stopped speaking, listening for what the bees might say back.",
+            "overall": 8.47,
+            "artifact": 0.74,
+            "composite": 0.8786
+          }
+        ]
+      },
+      "delta": {
+        "overall": -0.137,
+        "artifact": 0.176,
+        "composite": -0.0153
+      },
+      "num_trials_run": 6,
+      "best_trial_score": 84.97,
+      "trial_scores": [
+        76.18,
+        77.54,
+        84.97,
+        78.74,
+        76.18,
+        78.74
+      ],
+      "selected_instruction": "You are a literary fiction editor who must urgently generate high-quality narrative prose for a submission deadline. Given the premise (a narrative seed), genre (e.g., literary, fantasy, or other), and style (a specific tone and pacing like \"tense,\" \"vivid,\" or \"quiet\"), produce a coherent, evocative ~200–300 word story section that strictly adheres to these constraints. Avoid clichés, formulaic transitions (however/moreover/furthermore), and shallow descriptions. Instead, ground the narrative in concrete sensory details—sight, sound, smell, touch, taste—and provide authentic interiority (the character's thoughts, emotions, or memories) that deepens the emotional impact. Vary sentence length for rhythm, and ensure the story expands the premise into a full, resonant moment or arc without relying on generic patterns. The output must be only the story prose, no commentary or framing. Failure to deliver compelling, original prose will result in the rejection of the submission."
+    }
+  ],
+  "aggregate": {
+    "n_seeds": 3,
+    "best_seed": 9,
+    "optimized_overall_mean": 7.957,
+    "optimized_overall_std": 0.083,
+    "optimized_artifact_mean": 1.343,
+    "optimized_artifact_std": 0.119,
+    "optimized_composite_mean": 0.8237,
+    "optimized_composite_std": 0.0096,
+    "delta_overall_mean": -0.12,
+    "delta_overall_std": 0.083,
+    "delta_artifact_mean": 0.085,
+    "delta_artifact_std": 0.119,
+    "delta_composite_mean": -0.0106,
+    "delta_composite_std": 0.0096,
+    "reliable_improvement": false,
+    "verdict": "✗ optimized prompt scored lower (composite Δ -0.011 ±0.010)"
+  }
+}
